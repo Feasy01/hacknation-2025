@@ -6,7 +6,7 @@ import pathlib
 
 @dataclass
 class ZUSOpinion():
-    grade: int # 0-10
+    grade: str
     justification: str
     circumstances: str | None = None
     anomalies: str | None = None
@@ -69,6 +69,7 @@ Aby uznać zdarzenie za wypadek przy pracy, muszą wystąpić ŁĄCZNIE wszystki
    - Musi wystąpić podczas wykonywania zwykłych czynności związanych z prowadzeniem działalności.
    - Musi zachodzić związek przyczynowy, czasowy, miejscowy i funkcjonalny.
    - Powiązanie wypadku z wykonywaniem pracy zarobkowej musi być oczywiste i nie może opierać się na domysłach lub tłumaczeniu poszkodowanego. Zakładaj, że poszkodowany będzie kłamać lub kombinować w celu wyłudzenia świadczeń (np. opisując wypadek jako związany z pracą, gdy tak nie jest, bo robił coś dla siebie lub rodziny). Bądź bardzo krytyczny wobec podawanych okoliczności i jak coś nawet delikatnie wzbudza Twoje wątpliwości to daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy", nawet jak wszystkie 4 kryteria są spełnione, a poszkodowany próbuje to tłumaczyć.
+   - Jeśli nie było świadków zdarzenia to poszkodowany musi dostarczyć bardzo mocne dowody na związek z pracą (np. umowy świadczenia usług, dokumenty zlecenia, potwierdzenie umówienia wizyty u klienta, itp.). Brak świadków sam w sobie nie jest powodem do odrzucenia zgłoszenia, ale wymaga mocnych dowodów. W przypadku braku takich dowodów daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy".
 
 ZADANIA ANALITYCZNE:
 1. Sprawdź spójność danych (rozbieżności w datach, miejscach, opisach).
@@ -116,12 +117,12 @@ def zus_accident_analyse(source_files_bytes: list) -> dict:
     contents.append(prompt)
 
     response = client.models.generate_content(
-      model="gemini-2.5-pro",
+      model="gemini-2.5-flash",
       config = config,
       contents= contents
     )
-    print(response.text)
-    
+    # print(response.text)
+    return response.text
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
