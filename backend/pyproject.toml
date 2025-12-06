@@ -1,0 +1,13 @@
+[project]
+name = "monolith-bootstrap-backend"
+version = "0.1.0"
+description = "FastAPI backend for the monolith bootstrap"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.110.0",
+    "uvicorn[standard]==0.27.1",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
