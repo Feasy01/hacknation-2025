@@ -197,3 +197,22 @@ export const chatApi = {
     return handleResponse(response);
   },
 };
+
+// ElevenLabs integration helpers
+export const elevenLabsApi = {
+  // Sync manual form edits into ElevenLabs conversation session
+  syncConversation: async (conversationId, formData) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/elevenlabs/conversation/${conversationId}/sync`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ form_data: formData }),
+      }
+    );
+
+    return handleResponse(response);
+  },
+};

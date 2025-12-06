@@ -1,7 +1,6 @@
 import json
 import uuid
-from copy import deepcopy
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, status
@@ -14,99 +13,17 @@ from app.models.schemas import (
     ChatMessageResponse,
     ChatAction,
     FormStateResponse,
-    PersonData,
-    Address,
-    BusinessAddress,
-    AccidentDetails,
 )
-from app.utils.validation import validate_pesel
+from app.services.form_state import (
+    apply_form_updates,
+    get_initial_form_data,
+    validate_form_data,
+)
 
 router = APIRouter(prefix="/api", tags=["chat"])
 
 # In-memory session storage (MVP - simple dict)
 sessions: Dict[str, dict] = {}
-
-
-def get_initial_form_data() -> AccidentReportFormData:
-    """Create initial empty form data."""
-    return AccidentReportFormData(
-        poszkodowany=PersonData(
-            pesel="",
-            dokument_typ="",
-            dokument_seria="",
-            dokument_numer="",
-            imie="",
-            nazwisko="",
-            data_urodzenia="",
-            miejsce_urodzenia="",
-            telefon="",
-        ),
-        adres_zamieszkania=Address(
-            ulica="",
-            nr_domu="",
-            nr_lokalu="",
-            kod_pocztowy="",
-            miejscowosc="",
-        ),
-        mieszka_za_granica=False,
-        inny_adres_korespondencyjny=False,
-        adres_dzialalnosci=BusinessAddress(
-            ulica="",
-            nr_domu="",
-            nr_lokalu="",
-            kod_pocztowy="",
-            miejscowosc="",
-        ),
-        zglaszajacy_inny=False,
-        szczegoly=AccidentDetails(
-            data="",
-            godzina="",
-            miejsce="",
-            godzina_rozpoczecia_pracy="",
-            godzina_zakonczenia_pracy="",
-            opis_urazow="",
-            opis_okolicznosci="",
-            pierwsza_pomoc=False,
-            postepowanie_prowadzone=False,
-            obsluga_maszyn=False,
-            atest_deklaracja=False,
-            ewidencja_srodkow_trwalych=False,
-        ),
-        swiadkowie=[],
-    )
-
-
-def validate_form_data(form_data: AccidentReportFormData) -> Dict[str, Any]:
-    """Validate form data and return validation errors."""
-    errors: Dict[str, Any] = {}
-    
-    # Validate PESEL
-    if form_data.poszkodowany.pesel:
-        pesel_valid, pesel_error = validate_pesel(form_data.poszkodowany.pesel)
-        if not pesel_valid:
-            errors["poszkodowany.pesel"] = pesel_error
-    
-    # Check required fields (basic validation)
-    required_fields = [
-        ("poszkodowany.imie", form_data.poszkodowany.imie),
-        ("poszkodowany.nazwisko", form_data.poszkodowany.nazwisko),
-        ("poszkodowany.pesel", form_data.poszkodowany.pesel),
-        ("szczegoly.data", form_data.szczegoly.data),
-        ("szczegoly.miejsce", form_data.szczegoly.miejsce),
-    ]
-    
-    for field_path, value in required_fields:
-        if not value or (isinstance(value, str) and not value.strip()):
-            if field_path not in errors:
-                errors[field_path] = "To pole jest wymagane"
-    
-    return errors
-
-
-def is_form_complete(form_data: AccidentReportFormData) -> bool:
-    """Check if form has all required fields filled."""
-    validation = validate_form_data(form_data)
-    return len(validation) == 0
 
 
 # System prompt for the agent (hardcoded MVP)
@@ -245,23 +162,6 @@ def call_model(form_data: dict, last_question: str, user_text: str) -> dict:
         }
 
 
-def apply_form_updates(form_data: AccidentReportFormData, updates: Dict[str, Any]) -> AccidentReportFormData:
-    """Apply updates to form data using dot notation paths."""
-    form_dict = form_data.model_dump()
-    
-    for path, value in updates.items():
-        keys = path.split(".")
-        current = form_dict
-        for key in keys[:-1]:
-            if key not in current:
-                break
-            current = current[key]
-        else:
-            current[keys[-1]] = value
-    
-    return AccidentReportFormData(**form_dict)
-
-
 @router.get("/form/state", response_model=FormStateResponse)
 async def get_form_state(sessionId: Optional[str] = None):
     """Get current form state for a session."""
@@ -370,4 +270,3 @@ async def skip_to_acceptance(sessionId: str):
     
     sessions[sessionId]["ready_to_skip"] = True
     return {"success": True, "readyToSkip": True}
-

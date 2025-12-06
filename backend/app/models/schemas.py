@@ -191,3 +191,36 @@ class ChatMessageResponse(BaseModel):
     sessionId: Optional[str] = None
     readyToSkip: Optional[bool] = None
 
+
+# Form session models (agent + wizard)
+class SessionCreateRequest(BaseModel):
+    sessionId: Optional[str] = None
+
+
+class SessionSnapshot(BaseModel):
+    sessionId: str
+    step: int
+    status: str
+    fields: AccidentReportFormData
+    pdfUrl: Optional[str] = None
+    zusStatus: Optional[str] = None
+    errors: Dict[str, Any] = Field(default_factory=dict)
+
+
+class FieldUpdateRequest(BaseModel):
+    path: str
+    value: Any
+
+
+class StepChangeRequest(BaseModel):
+    step: int
+
+
+class SessionMutationResponse(BaseModel):
+    sessionId: str
+    step: int
+    status: str
+    fields: AccidentReportFormData
+    errors: Dict[str, Any] = Field(default_factory=dict)
+    pdfUrl: Optional[str] = None
+    zusStatus: Optional[str] = None

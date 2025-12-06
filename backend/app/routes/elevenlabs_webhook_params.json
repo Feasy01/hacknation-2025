@@ -1,0 +1,341 @@
+{
+  "webhook_parameters": [
+    {
+      "property_id": "poszkodowany.pesel",
+      "variable_name": "poszkodowany_pesel",
+      "description": "Extract the PESEL (Polish national identification number) of the injured person (poszkodowany) from the conversation. PESEL is an 11-digit number. Look for phrases like 'mój PESEL to', 'numer PESEL', 'PESEL', or when the user provides their identification number.",
+      "required": true,
+      "value_type": "string"
+    },
+    {
+      "property_id": "poszkodowany.imie",
+      "variable_name": "poszkodowany_imie",
+      "description": "Extract the first name (imię) of the injured person from the conversation. Look for phrases like 'mam na imię', 'nazywam się', 'imię', or when the user introduces themselves.",
+      "required": true,
+      "value_type": "string"
+    },
+    {
+      "property_id": "poszkodowany.nazwisko",
+      "variable_name": "poszkodowany_nazwisko",
+      "description": "Extract the last name (nazwisko) of the injured person from the conversation. Look for phrases like 'nazywam się', 'moje nazwisko', 'nazwisko', or when the user provides their full name.",
+      "required": true,
+      "value_type": "string"
+    },
+    {
+      "property_id": "poszkodowany.data_urodzenia",
+      "variable_name": "poszkodowany_data_urodzenia",
+      "description": "Extract the date of birth (data urodzenia) of the injured person. Format should be YYYY-MM-DD or DD.MM.YYYY. Look for phrases like 'urodziłem się', 'data urodzenia', 'urodzony', or when the user mentions their birth date.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "poszkodowany.miejsce_urodzenia",
+      "variable_name": "poszkodowany_miejsce_urodzenia",
+      "description": "Extract the place of birth (miejsce urodzenia) of the injured person. Look for phrases like 'urodziłem się w', 'miejsce urodzenia', or when the user mentions where they were born.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "poszkodowany.dokument_typ",
+      "variable_name": "poszkodowany_dokument_typ",
+      "description": "Extract the type of identity document (typ dokumentu) - typically 'dowód osobisty' (ID card) or 'paszport' (passport). Look for phrases mentioning document type.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "poszkodowany.dokument_seria",
+      "variable_name": "poszkodowany_dokument_seria",
+      "description": "Extract the series (seria) of the identity document. This is usually 3 letters for Polish ID cards. Look for document series information.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "poszkodowany.dokument_numer",
+      "variable_name": "poszkodowany_dokument_numer",
+      "description": "Extract the number (numer) of the identity document. Look for document number information.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "poszkodowany.telefon",
+      "variable_name": "poszkodowany_telefon",
+      "description": "Extract the phone number (telefon) of the injured person. Look for phrases like 'mój numer telefonu', 'telefon', 'kontakt', or when the user provides their phone number.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_zamieszkania.ulica",
+      "variable_name": "adres_zamieszkania_ulica",
+      "description": "Extract the street name (ulica) of the residential address (adres zamieszkania). Look for street names mentioned in the conversation.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_zamieszkania.nr_domu",
+      "variable_name": "adres_zamieszkania_nr_domu",
+      "description": "Extract the house number (numer domu) of the residential address. Look for house numbers mentioned with the address.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_zamieszkania.nr_lokalu",
+      "variable_name": "adres_zamieszkania_nr_lokalu",
+      "description": "Extract the apartment/flat number (numer lokalu) of the residential address if applicable. Look for apartment numbers mentioned.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_zamieszkania.kod_pocztowy",
+      "variable_name": "adres_zamieszkania_kod_pocztowy",
+      "description": "Extract the postal code (kod pocztowy) of the residential address. Format is typically XX-XXX (e.g., 00-001). Look for postal codes in the address information.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_zamieszkania.miejscowosc",
+      "variable_name": "adres_zamieszkania_miejscowosc",
+      "description": "Extract the city/town name (miejscowość) of the residential address. Look for city names mentioned in the address.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_zamieszkania.panstwo",
+      "variable_name": "adres_zamieszkania_panstwo",
+      "description": "Extract the country (państwo) of the residential address if different from Poland. Default is Poland if not mentioned.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "mieszka_za_granica",
+      "variable_name": "mieszka_za_granica",
+      "description": "Extract whether the injured person lives abroad (mieszka za granicą). Set to true if the user mentions living outside Poland, false otherwise. Look for phrases like 'mieszkam za granicą', 'mieszkam w [foreign country]'.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "szczegoly.data",
+      "variable_name": "szczegoly_data",
+      "description": "Extract the date (data) when the accident occurred. Format should be YYYY-MM-DD or DD.MM.YYYY. Look for phrases like 'wypadek wydarzył się', 'data wypadku', 'kiedy miał miejsce wypadek', or when the user mentions the accident date.",
+      "required": true,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.godzina",
+      "variable_name": "szczegoly_godzina",
+      "description": "Extract the time (godzina) when the accident occurred. Format should be HH:MM (24-hour format). Look for phrases like 'o której godzinie', 'godzina wypadku', or when the user mentions the time of the accident.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.miejsce",
+      "variable_name": "szczegoly_miejsce",
+      "description": "Extract the location/place (miejsce) where the accident occurred. This should include the full address or description of where the accident happened. Look for phrases like 'gdzie miał miejsce wypadek', 'miejsce wypadku', or when the user describes where the accident occurred.",
+      "required": true,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.godzina_rozpoczecia_pracy",
+      "variable_name": "szczegoly_godzina_rozpoczecia_pracy",
+      "description": "Extract the work start time (godzina rozpoczęcia pracy) on the day of the accident. Format should be HH:MM. Look for phrases like 'rozpocząłem pracę o', 'praca zaczęła się o', or when the user mentions when they started work.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.godzina_zakonczenia_pracy",
+      "variable_name": "szczegoly_godzina_zakonczenia_pracy",
+      "description": "Extract the work end time (godzina zakończenia pracy) on the day of the accident, or the scheduled end time. Format should be HH:MM. Look for phrases like 'praca miała się zakończyć o', 'planowane zakończenie pracy', or when the user mentions work schedule.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.opis_urazow",
+      "variable_name": "szczegoly_opis_urazow",
+      "description": "Extract the description of injuries (opis urazów) sustained in the accident. This should be a detailed description of what injuries occurred. Look for phrases like 'jakie urazy', 'co się stało', 'zraniony', 'złamany', or when the user describes their injuries.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.opis_okolicznosci",
+      "variable_name": "szczegoly_opis_okolicznosci",
+      "description": "Extract the description of circumstances (opis okoliczności) of how the accident happened. This should describe what led to the accident and how it occurred. Look for phrases like 'jak doszło do wypadku', 'okoliczności wypadku', 'co się wydarzyło', or when the user describes the accident sequence.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.pierwsza_pomoc",
+      "variable_name": "szczegoly_pierwsza_pomoc",
+      "description": "Extract whether first aid (pierwsza pomoc) was provided. Set to true if first aid was given, false otherwise. Look for phrases like 'udzielono pierwszej pomocy', 'pierwsza pomoc', 'ratownicy', or when the user mentions medical assistance.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "szczegoly.pierwsza_pomoc_nazwa",
+      "variable_name": "szczegoly_pierwsza_pomoc_nazwa",
+      "description": "Extract the name (nazwa) of the first aid provider if first aid was provided. Look for names of medical facilities, ambulance services, or individuals who provided first aid.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.pierwsza_pomoc_adres",
+      "variable_name": "szczegoly_pierwsza_pomoc_adres",
+      "description": "Extract the address (adres) of the first aid provider if first aid was provided. Look for addresses of medical facilities or locations where first aid was given.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.postepowanie_prowadzone",
+      "variable_name": "szczegoly_postepowanie_prowadzone",
+      "description": "Extract whether legal proceedings (postępowanie) are being conducted regarding the accident. Set to true if any legal proceedings are mentioned, false otherwise. Look for phrases like 'postępowanie', 'prokuratura', 'policja prowadzi', or mentions of legal actions.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "szczegoly.postepowanie_organ",
+      "variable_name": "szczegoly_postepowanie_organ",
+      "description": "Extract the authority/organ (organ) conducting the proceedings if postepowanie_prowadzone is true. Look for names of authorities like 'policja', 'prokuratura', 'inspekcja pracy', or other official bodies.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.postepowanie_adres",
+      "variable_name": "szczegoly_postepowanie_adres",
+      "description": "Extract the address (adres) of the authority conducting the proceedings if applicable. Look for addresses of police stations, prosecutor's offices, or other official bodies.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.obsluga_maszyn",
+      "variable_name": "szczegoly_obsluga_maszyn",
+      "description": "Extract whether machinery/equipment (obsługa maszyn) was involved in the accident. Set to true if machines or equipment were involved, false otherwise. Look for mentions of machines, equipment, tools, or mechanical devices.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "szczegoly.maszyny_sprawne",
+      "variable_name": "szczegoly_maszyny_sprawne",
+      "description": "Extract whether the machinery was in working order (maszyny sprawne) if obsluga_maszyn is true. Set to true if machines were functional, false if they were defective. Look for mentions of machine condition, functionality, or defects.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "szczegoly.maszyny_zgodnie_z_zasadami",
+      "variable_name": "szczegoly_maszyny_zgodnie_z_zasadami",
+      "description": "Extract whether machinery was used according to regulations (zgodnie z zasadami) if obsluga_maszyn is true. Set to true if used properly, false otherwise. Look for mentions of proper usage, safety procedures, or violations.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "szczegoly.maszyny_opis",
+      "variable_name": "szczegoly_maszyny_opis",
+      "description": "Extract the description (opis) of the machinery involved if obsluga_maszyn is true. This should describe what machines or equipment were involved in the accident.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "szczegoly.atest_deklaracja",
+      "variable_name": "szczegoly_atest_deklaracja",
+      "description": "Extract whether certificates/declarations (atest/deklaracja) exist for the machinery or workplace. Set to true if certificates are mentioned, false otherwise. Look for mentions of certificates, declarations, or compliance documents.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "szczegoly.ewidencja_srodkow_trwalych",
+      "variable_name": "szczegoly_ewidencja_srodkow_trwalych",
+      "description": "Extract whether there is a register of fixed assets (ewidencja środków trwałych) for the machinery. Set to true if such register exists, false otherwise. Look for mentions of asset registers or equipment records.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "adres_dzialalnosci.ulica",
+      "variable_name": "adres_dzialalnosci_ulica",
+      "description": "Extract the street name (ulica) of the business/activity address (adres działalności) where the accident occurred. This is the address of the workplace or business location.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_dzialalnosci.nr_domu",
+      "variable_name": "adres_dzialalnosci_nr_domu",
+      "description": "Extract the house number (numer domu) of the business/activity address.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_dzialalnosci.nr_lokalu",
+      "variable_name": "adres_dzialalnosci_nr_lokalu",
+      "description": "Extract the apartment/flat number (numer lokalu) of the business/activity address if applicable.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_dzialalnosci.kod_pocztowy",
+      "variable_name": "adres_dzialalnosci_kod_pocztowy",
+      "description": "Extract the postal code (kod pocztowy) of the business/activity address. Format is typically XX-XXX.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_dzialalnosci.miejscowosc",
+      "variable_name": "adres_dzialalnosci_miejscowosc",
+      "description": "Extract the city/town name (miejscowość) of the business/activity address.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "adres_dzialalnosci.telefon",
+      "variable_name": "adres_dzialalnosci_telefon",
+      "description": "Extract the phone number (telefon) of the business/activity location if mentioned.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "zglaszajacy_inny",
+      "variable_name": "zglaszajacy_inny",
+      "description": "Extract whether someone other than the injured person is reporting the accident (zgłaszający inny). Set to true if a different person is reporting, false if the injured person is reporting themselves. Look for phrases indicating who is making the report.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "zglaszajacy.pesel",
+      "variable_name": "zglaszajacy_pesel",
+      "description": "Extract the PESEL of the person reporting the accident (zgłaszający) if zglaszajacy_inny is true. Look for the reporter's identification number.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "zglaszajacy.imie",
+      "variable_name": "zglaszajacy_imie",
+      "description": "Extract the first name of the person reporting the accident if zglaszajacy_inny is true.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "zglaszajacy.nazwisko",
+      "variable_name": "zglaszajacy_nazwisko",
+      "description": "Extract the last name of the person reporting the accident if zglaszajacy_inny is true.",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "inny_adres_korespondencyjny",
+      "variable_name": "inny_adres_korespondencyjny",
+      "description": "Extract whether a different correspondence address (inny adres korespondencyjny) should be used. Set to true if the user wants correspondence sent to a different address than the residential address, false otherwise.",
+      "required": false,
+      "value_type": "boolean"
+    },
+    {
+      "property_id": "adres_korespondencyjny.typ",
+      "variable_name": "adres_korespondencyjny_typ",
+      "description": "Extract the type (typ) of correspondence address if inny_adres_korespondencyjny is true. Should be 'adres' (regular address), 'poste-restante' (poste restante), or 'skrytka' (PO box).",
+      "required": false,
+      "value_type": "string"
+    },
+    {
+      "property_id": "swiadkowie",
+      "variable_name": "swiadkowie",
+      "description": "Extract information about witnesses (świadkowie) to the accident. This should be an array of witness objects, each containing: id, imie, nazwisko, ulica, nr_domu, nr_lokalu, kod_pocztowy, miejscowosc, and optionally panstwo. Look for mentions of witnesses, people who saw the accident, or bystanders.",
+      "required": false,
+      "value_type": "array"
+    }
+  ]
+}
+

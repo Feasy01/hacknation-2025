@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import applications, attachments, health, chat
+from app.routes import applications, attachments, health, chat, elevenlabs
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -31,6 +31,7 @@ app.include_router(health.router)
 app.include_router(applications.router)
 app.include_router(attachments.router)
 app.include_router(chat.router)
+app.include_router(elevenlabs.router)
 
 
 @app.get("/", tags=["root"])

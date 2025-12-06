@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AccidentReportFormData, initialFormData, PersonData, Address, CorrespondenceAddress, Witness, AccidentDetails } from '@/types/accident-report';
 import { StepIndicator, FORM_STEPS } from './StepIndicator';
 import { Step1VictimData } from './steps/Step1VictimData';
@@ -15,19 +15,26 @@ import { ChatForm } from './ChatForm';
 import { AcceptanceScreen } from './AcceptanceScreen';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { applicationsApi } from '@/utils/apiClient';
+import { applicationsApi, elevenLabsApi } from '@/utils/apiClient';
 import { Application } from '@/types/api';
+import { mapBackendFormToFrontend, mapFrontendFormToBackend } from '@/utils/formMapping';
 
 type FormMode = 'select' | 'wizard' | 'chat';
 
-export const AccidentReportForm: React.FC = () => {
-  const [mode, setMode] = useState<FormMode>('select');
+interface AccidentReportFormProps {
+  conversationId?: string;
+}
+
+export const AccidentReportForm: React.FC<AccidentReportFormProps> = ({ conversationId }) => {
+  const [mode, setMode] = useState<FormMode>('wizard');
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<AccidentReportFormData>(initialFormData);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedApplication, setSubmittedApplication] = useState<Application | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const syncTimeoutRef = useRef<number | null>(null);
+  const isSseUpdateRef = useRef(false);
 
   const goToStep = (step: number) => {
     if (step >= 1 && step <= FORM_STEPS.length) {
@@ -140,6 +147,71 @@ export const AccidentReportForm: React.FC = () => {
     setSubmitError(null);
   };
 
+  // Live updates from ElevenLabs webhook via SSE
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    const streamUrl = `${apiBaseUrl}/api/elevenlabs/stream/${conversationId}`;
+    const eventSource = new EventSource(streamUrl);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload?.type === 'form_update' && payload.form_data) {
+          const mapped = mapBackendFormToFrontend(payload.form_data);
+          isSseUpdateRef.current = true;
+          setFormData(mapped);
+        }
+      } catch (error) {
+        console.error('Error parsing ElevenLabs SSE payload', error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('ElevenLabs SSE connection error', error);
+    };
+
+    return () => eventSource.close();
+  }, [conversationId]);
+
+  const syncElevenLabsForm = useCallback(
+    async (data: AccidentReportFormData) => {
+      if (!conversationId) return;
+
+      try {
+        const backendPayload = mapFrontendFormToBackend(data);
+        await elevenLabsApi.syncConversation(conversationId, backendPayload);
+      } catch (error) {
+        console.error('Error syncing manual form data to ElevenLabs session', error);
+      }
+    },
+    [conversationId]
+  );
+
+  useEffect(() => {
+    if (!conversationId) return;
+    if (isSseUpdateRef.current) {
+      // Skip sync for state changes coming from ElevenLabs to avoid echo loops
+      isSseUpdateRef.current = false;
+      return;
+    }
+
+    if (syncTimeoutRef.current) {
+      window.clearTimeout(syncTimeoutRef.current);
+    }
+
+    syncTimeoutRef.current = window.setTimeout(() => {
+      syncElevenLabsForm(formData);
+    }, 400);
+
+    return () => {
+      if (syncTimeoutRef.current) {
+        window.clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, [conversationId, formData, syncElevenLabsForm]);
+
   // Mode selection screen
   if (mode === 'select') {
     return <ModeSelector onSelectMode={(m) => setMode(m === 'wizard' ? 'wizard' : 'chat')} />;
@@ -213,51 +285,64 @@ export const AccidentReportForm: React.FC = () => {
     }
   };
 
+  const progressPercentage = Math.round((currentStep / FORM_STEPS.length) * 100);
+  const currentStepData = FORM_STEPS.find((s) => s.id === currentStep);
+
   return (
-    <div className="space-y-4">
-      {/* Step indicator panel */}
-      <div className="zus-panel">
-        <div className="zus-panel-header">
-          <span>Postęp wypełniania formularza</span>
-        </div>
-        <div className="zus-panel-content">
-          <StepIndicator steps={FORM_STEPS} currentStep={currentStep} onStepClick={goToStep} />
+    <div className="flex justify-center py-6">
+      <div className="w-full max-w-3xl">
+        <div className="space-y-6">
+          {/* Main card with header and step indicator */}
+          <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">
+            {/* Header with progress */}
+            <div className="bg-primary/5 border-b border-border px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-foreground">
+                    {currentStepData?.title}
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Krok {currentStep} z {FORM_STEPS.length}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-primary">{progressPercentage}%</span>
+                    <p className="text-xs text-muted-foreground">ukończono</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step indicator */}
+            <div className="px-6 py-4 bg-card">
+              <StepIndicator steps={FORM_STEPS} currentStep={currentStep} onStepClick={goToStep} />
+            </div>
+          </div>
+
+          {/* Step content */}
+          <div className="animate-fade-in">
+            {renderStep()}
+          </div>
+
+          {/* Navigation */}
+          <div className="flex justify-between pt-4">
+            <Button
+              variant="outline"
+              onClick={handleBack}
+              disabled={currentStep === 1}
+              className="gap-2 text-sm"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Wstecz
+            </Button>
+            <Button onClick={handleNext} className="gap-2 text-sm shadow-sm">
+              Dalej
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
-
-      {/* Current step info */}
-      <div className="flex items-center justify-between text-sm">
-        <h2 className="font-semibold text-foreground">
-          Krok {currentStep}: {FORM_STEPS.find((s) => s.id === currentStep)?.title}
-        </h2>
-        <span className="text-muted-foreground">
-          {currentStep} z {FORM_STEPS.length}
-        </span>
-      </div>
-
-      {/* Step content */}
-      <div className="animate-fade-in">
-        {renderStep()}
-      </div>
-
-      {/* Navigation */}
-      {currentStep < 8 && (
-        <div className="flex justify-between pt-4 border-t border-border">
-          <Button
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 1}
-            className="gap-2 text-sm"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Wstecz
-          </Button>
-          <Button onClick={handleNext} className="gap-2 text-sm">
-            Dalej
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
     </div>
   );
 };
