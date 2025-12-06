@@ -2,12 +2,235 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color-scheme: light;
+/* ZUS uses Arial as primary system font */
+
+@layer base {
+  :root {
+    /* ZUS Portal Theme - Light gray institutional look */
+    --background: 0 0% 96%;
+    --foreground: 0 0% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+
+    /* Olive green from ZUS - main accent */
+    --primary: 68 35% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 25%;
+
+    --muted: 0 0% 94%;
+    --muted-foreground: 0 0% 45%;
+
+    /* Green accent for links and highlights */
+    --accent: 68 50% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 85%;
+    --input: 0 0% 85%;
+    --ring: 68 35% 45%;
+
+    --radius: 0.25rem;
+
+    /* ZUS Sidebar - olive green header */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 25%;
+    --sidebar-header: 68 35% 45%;
+    --sidebar-header-foreground: 0 0% 100%;
+    --sidebar-primary: 68 50% 40%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 68 35% 95%;
+    --sidebar-accent-foreground: 0 0% 25%;
+    --sidebar-border: 0 0% 88%;
+    --sidebar-ring: 68 35% 45%;
+
+    /* ZUS Header - dark gray */
+    --header-background: 0 0% 30%;
+    --header-foreground: 0 0% 100%;
+    
+    /* Section headers - olive green */
+    --section-header: 68 35% 45%;
+    --section-header-foreground: 0 0% 100%;
+
+    /* Custom status tokens */
+    --success: 120 40% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 20%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Gradients - keep simple */
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 30%) 0%, hsl(0 0% 40%) 100%);
+
+    /* Shadows - subtle */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --shadow-md: 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+    --shadow-lg: 0 4px 6px -2px hsl(0 0% 0% / 0.1);
+    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.08);
+  }
+
+  .dark {
+    --background: 0 0% 12%;
+    --foreground: 0 0% 90%;
+
+    --card: 0 0% 16%;
+    --card-foreground: 0 0% 90%;
+
+    --popover: 0 0% 16%;
+    --popover-foreground: 0 0% 90%;
+
+    --primary: 68 40% 50%;
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 85%;
+
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 60%;
+
+    --accent: 68 50% 45%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 22%;
+    --input: 0 0% 22%;
+    --ring: 68 40% 50%;
+
+    --sidebar-background: 0 0% 14%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-header: 68 35% 40%;
+    --sidebar-header-foreground: 0 0% 100%;
+    --sidebar-primary: 68 50% 45%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 0 0% 18%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 68 40% 50%;
+
+    --header-background: 0 0% 18%;
+    --header-foreground: 0 0% 95%;
+    
+    --section-header: 68 35% 40%;
+    --section-header-foreground: 0 0% 100%;
+  }
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  /* ZUS-style section panel */
+  .zus-panel {
+    @apply bg-card border border-border;
+  }
+
+  .zus-panel-header {
+    @apply bg-[hsl(var(--section-header))] text-[hsl(var(--section-header-foreground))] px-3 py-2 text-sm font-semibold flex items-center justify-between;
+  }
+
+  .zus-panel-content {
+    @apply p-4;
+  }
+
+  /* ZUS-style menu item */
+  .zus-menu-item {
+    @apply flex items-center justify-between px-3 py-2.5 text-sm border-b border-border hover:bg-muted/50 cursor-pointer transition-colors;
+  }
+
+  .zus-menu-item-active {
+    @apply border-l-4 border-l-primary bg-muted/30;
+  }
+
+  /* ZUS-style link */
+  .zus-link {
+    @apply text-primary hover:text-primary/80 hover:underline cursor-pointer text-sm;
+  }
+
+  /* Form section styling */
+  .form-section {
+    @apply bg-card border border-border;
+  }
+
+  .form-section-title {
+    @apply bg-[hsl(var(--section-header))] text-[hsl(var(--section-header-foreground))] px-4 py-2.5 text-sm font-semibold flex items-center gap-2;
+  }
+
+  .form-section-content {
+    @apply p-4;
+  }
+
+  /* Step indicator */
+  .step-indicator {
+    @apply w-7 h-7 rounded-sm flex items-center justify-center text-xs font-medium transition-all duration-200;
+  }
+
+  .step-indicator-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .step-indicator-completed {
+    @apply bg-success text-success-foreground;
+  }
+
+  .step-indicator-inactive {
+    @apply bg-muted text-muted-foreground border border-border;
+  }
+
+  /* ZUS button styles */
+  .zus-btn {
+    @apply px-3 py-1.5 text-sm border border-border bg-secondary hover:bg-muted transition-colors;
+  }
+
+  .zus-btn-primary {
+    @apply bg-primary text-primary-foreground border-primary hover:bg-primary/90;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }

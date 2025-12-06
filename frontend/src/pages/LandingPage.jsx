@@ -1,4 +1,4 @@
-import HomeContainer from '~/containers/HomeContainer';
+import HomeContainer from '@/containers/HomeContainer';
 
 const LandingPage = () => <HomeContainer />;
 

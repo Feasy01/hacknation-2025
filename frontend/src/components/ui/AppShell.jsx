@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { Menu } from 'lucide-react';
 
-import useBreakpoint from '~/hooks/useBreakpoint';
-import useDisclosure from '~/hooks/useDisclosure';
+import useBreakpoint from '@/hooks/useBreakpoint';
+import useDisclosure from '@/hooks/useDisclosure';
 
 const AppShell = ({ header, sidebar, footer, children }) => {
   const { isOpen, toggle, close } = useDisclosure(true);

@@ -1,4 +1,4 @@
-import useDisclosure from '~/hooks/useDisclosure';
+import useDisclosure from '@/hooks/useDisclosure';
 
 const PopoverMenu = ({ trigger, items = [] }) => {
   const { isOpen, toggle, close } = useDisclosure(false);

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import Hero from '~/components/Hero';
-import FeatureCard from '~/components/FeatureCard';
-import { fetchHealth } from '~/utils/apiClient';
+import Hero from '@/components/Hero';
+import FeatureCard from '@/components/FeatureCard';
+import { fetchHealth } from '@/utils/apiClient';
 
 const features = [
   {
