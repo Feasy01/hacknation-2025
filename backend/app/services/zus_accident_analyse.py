@@ -2,17 +2,11 @@ from dataclasses import dataclass
 import json
 from google import genai
 from google.genai import types
+import pathlib
 
 @dataclass
 class ZUSOpinion():
-    conclusion: str
-    '''
-    [
-        "Tak, jest to wypadek przy pracy",
-        "Nie, nie jest to wypadek przy pracy",
-        "Nie mam wystarczających informacji, aby ocenić, czy jest to wypadek przy pracy"
-    ]
-    '''
+    grade: int # 0-10
     justification: str
     circumstances: str | None = None
     anomalies: str | None = None
@@ -20,15 +14,11 @@ class ZUSOpinion():
 response_schema = types.Schema(
     type=types.Type.OBJECT,
     properties={
-        "conclusion": types.Schema(
-            type=types.Type.STRING,
-            description="Ocena, czy zdarzenie jest wypadkiem przy pracy",
-            enum=[
-                "Tak, jest to wypadek przy pracy",
-                "Nie, nie jest to wypadek przy pracy",
-                "Nie mam wystarczających informacji, aby ocenić, czy jest to wypadek przy pracy",
-                "Nie mam pewności, przypadek jest wątpliwy"
-            ]
+        "grade": types.Schema(
+            type=types.Type.INTEGER,
+            description="Ocena, czy zdarzenie było wypadkiem przy pracy. 0 - nie było wypadkiem przy pracy, 10 - zdecydowanie było wypadkiem przy pracy. Ocena powinna być oparta na analizie czterech przesłanek określonych w polskim prawie pracy tj. nagłe zdarzenie, przyczyna zewnętrzna, związek z pracą (przyczynowy, czasowy, miejscowy i funkcjonalny) oraz uszczerbek na zdrowiu. Należy unikać ogólników i podać konkretne fakty z opisu zdarzenia. Jeśli nie jesteś w 100% pewien, że zdarzenie spełnia wszystkie kryteria, obniż ocenę odpowiednio.",
+            minimum=0,
+            maximum=10,
         ),
         "justification": types.Schema(
             type=types.Type.STRING,
@@ -44,7 +34,7 @@ response_schema = types.Schema(
         )
     },
     required=[
-        "conclusion",
+        "grade",
         "justification"
     ]
 )
@@ -84,6 +74,7 @@ ZADANIA ANALITYCZNE:
 PAMIĘTAJ O FORMALNYM STYLU I PRECYZYJNYM JĘZYKU.
 Analiza musi być obiektywna i pozbawiona emocji.
 Jeśli nie jesteś w 100 % pewien, że zdarzenie spełnia wszystkie kryteria, wskaż to wyraźnie w opinii.
+WAŻNE! Zakładaj, że poszkodowany może kłamać lub kombinować w celu wyłudzenia świadczeń.
 """
 
 
@@ -148,11 +139,26 @@ Umowa na wykonanie usługi została zawarta ustnie, praca nie została zakończo
       response_schema=response_schema
     )
 
+    # Retrieve and encode the PDF byte
+    filepath = pathlib.Path('pinput2.pdf')
+
+    prompt = "Przeanalizuj załączony dokument zgłoszenia wypadku przy pracy i wygeneruj opinię zgodnie z podanymi kryteriami oraz wypełnij schemat wyjściowy."
     response = client.models.generate_content(
-      contents = json.dumps(zgloszenie),
-      model = "gemini-2.5-flash",
-      config = config
-    )
+      model="gemini-2.5-flash",
+      config = config,
+      contents=[
+          types.Part.from_bytes(
+            data=filepath.read_bytes(),
+            mime_type='application/pdf',
+          ),
+          prompt])
+    print(response.text)
+
+    # response = client.models.generate_content(
+    #   contents = json.dumps(zgloszenie),
+    #   model = "gemini-2.5-flash",
+    #   config = config
+    # )
 
     print(response.text)
     
