@@ -10,12 +10,18 @@ import { Step6Machinery } from './steps/Step6Machinery';
 import { Step7Witnesses } from './steps/Step7Witnesses';
 import { Step8Summary } from './steps/Step8Summary';
 import { ConfirmationScreen } from './ConfirmationScreen';
+import { ModeSelector } from './ModeSelector';
+import { ChatForm } from './ChatForm';
+import { AcceptanceScreen } from './AcceptanceScreen';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { applicationsApi } from '@/utils/apiClient';
 import { Application } from '@/types/api';
 
+type FormMode = 'select' | 'wizard' | 'chat';
+
 export const AccidentReportForm: React.FC = () => {
+  const [mode, setMode] = useState<FormMode>('select');
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<AccidentReportFormData>(initialFormData);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -121,6 +127,35 @@ export const AccidentReportForm: React.FC = () => {
     setFormData((prev) => ({ ...prev, swiadkowie: witnesses }));
   };
 
+  const handleChatComplete = (chatFormData: AccidentReportFormData) => {
+    setFormData(chatFormData);
+    setMode('acceptance');
+  };
+
+  const handleBackToModeSelect = () => {
+    setMode('select');
+    setFormData(initialFormData);
+    setIsSubmitted(false);
+    setSubmittedApplication(null);
+    setSubmitError(null);
+  };
+
+  // Mode selection screen
+  if (mode === 'select') {
+    return <ModeSelector onSelectMode={(m) => setMode(m === 'wizard' ? 'wizard' : 'chat')} />;
+  }
+
+  // Chat mode
+  if (mode === 'chat') {
+    return <ChatForm onComplete={handleChatComplete} />;
+  }
+
+  // Acceptance screen (after chat)
+  if (mode === 'acceptance') {
+    return <AcceptanceScreen data={formData} onBack={handleBackToModeSelect} />;
+  }
+
+  // Confirmation screen (after wizard submission)
   if (isSubmitted && submittedApplication) {
     return <ConfirmationScreen data={formData} application={submittedApplication} onBack={handleBackToForm} />;
   }

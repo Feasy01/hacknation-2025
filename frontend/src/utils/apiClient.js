@@ -163,3 +163,37 @@ export const fileToBase64 = (file) => {
     reader.onerror = (error) => reject(error);
   });
 };
+
+// Chat/Form API
+export const chatApi = {
+  // Get form state
+  getFormState: async (sessionId = null) => {
+    const queryParams = new URLSearchParams();
+    if (sessionId) queryParams.append('sessionId', sessionId);
+    
+    const response = await fetch(`${API_BASE_URL}/api/form/state?${queryParams.toString()}`);
+    return handleResponse(response);
+  },
+
+  // Send chat message
+  sendMessage: async (message, sessionId = null) => {
+    const response = await fetch(`${API_BASE_URL}/api/chat/message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message, sessionId }),
+    });
+    
+    return handleResponse(response);
+  },
+
+  // Skip to acceptance
+  skipToAcceptance: async (sessionId) => {
+    const response = await fetch(`${API_BASE_URL}/api/form/skip?sessionId=${sessionId}`, {
+      method: 'POST',
+    });
+    
+    return handleResponse(response);
+  },
+};
