@@ -15,10 +15,14 @@ response_schema = types.Schema(
     type=types.Type.OBJECT,
     properties={
         "grade": types.Schema(
-            type=types.Type.INTEGER,
-            description="Ocena, czy zdarzenie było wypadkiem przy pracy. 0 - nie było wypadkiem przy pracy, 10 - zdecydowanie było wypadkiem przy pracy. Ocena powinna być oparta na analizie czterech przesłanek określonych w polskim prawie pracy tj. nagłe zdarzenie, przyczyna zewnętrzna, związek z pracą (przyczynowy, czasowy, miejscowy i funkcjonalny) oraz uszczerbek na zdrowiu. Należy unikać ogólników i podać konkretne fakty z opisu zdarzenia. Jeśli nie jesteś w 100% pewien, że zdarzenie spełnia wszystkie kryteria, obniż ocenę odpowiednio.",
-            minimum=0,
-            maximum=10,
+            type=types.Type.STRING,
+            description="Ocena, czy zdarzenie jest wypadkiem przy pracy",
+            enum=[
+                "Tak, jest to wypadek przy pracy",
+                "Nie, nie jest to wypadek przy pracy",
+                "Nie mam wystarczających informacji, aby ocenić, czy jest to wypadek przy pracy",
+                "Nie mam 100% pewności, przypadek jest wątpliwy"
+            ]
         ),
         "justification": types.Schema(
             type=types.Type.STRING,
@@ -30,7 +34,7 @@ response_schema = types.Schema(
         ),
         "anomalies": types.Schema(
             type=types.Type.STRING,
-            description="Nieprawidłowości lub rozbieżności w zgłoszeniu, jeśli występują np. niezgodne daty lub miejsca zdarzenia, niezgodności w opisie przyczyn lub skutków zdarzenia, itp.",
+            description="Nieprawidłowości lub rozbieżności w zgłoszeniu, jeśli występują np. niezgodne daty lub miejsca zdarzenia, niezgodności w opisie przyczyn lub skutków zdarzenia, itp. Brak świadków nie jest anomalią.",
         )
     },
     required=[
@@ -64,6 +68,7 @@ Aby uznać zdarzenie za wypadek przy pracy, muszą wystąpić ŁĄCZNIE wszystki
    - Zdarzenie musi nastąpić w okresie ubezpieczenia wypadkowego (zakładamy, że tak jest, chyba że w zgłoszeniu podano inaczej).
    - Musi wystąpić podczas wykonywania zwykłych czynności związanych z prowadzeniem działalności.
    - Musi zachodzić związek przyczynowy, czasowy, miejscowy i funkcjonalny.
+   - Powiązanie wypadku z wykonywaniem pracy zarobkowej musi być oczywiste i nie może opierać się na domysłach lub tłumaczeniu poszkodowanego. Zakładaj, że poszkodowany będzie kłamać lub kombinować w celu wyłudzenia świadczeń (np. opisując wypadek jako związany z pracą, gdy tak nie jest, bo robił coś dla siebie lub rodziny). Bądź bardzo krytyczny wobec podawanych okoliczności i jak coś nawet delikatnie wzbudza Twoje wątpliwości to daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy", nawet jak wszystkie 4 kryteria są spełnione, a poszkodowany próbuje to tłumaczyć.
 
 ZADANIA ANALITYCZNE:
 1. Sprawdź spójność danych (rozbieżności w datach, miejscach, opisach).
@@ -71,10 +76,14 @@ ZADANIA ANALITYCZNE:
 3. Przygotuj uzasadnienie decyzji (uznanie/odmowa) wskazując konkretne dowody.
 4. Wypełnij schemat wyjściowy zgodnie z analizą.
 5. Jeśli decyzja jest pozytywna, opisz w kilku zdaniach okoliczności zdarzenia.
-PAMIĘTAJ O FORMALNYM STYLU I PRECYZYJNYM JĘZYKU.
-Analiza musi być obiektywna i pozbawiona emocji.
-Jeśli nie jesteś w 100 % pewien, że zdarzenie spełnia wszystkie kryteria, wskaż to wyraźnie w opinii.
-WAŻNE! Zakładaj, że poszkodowany może kłamać lub kombinować w celu wyłudzenia świadczeń.
+
+WAŻNE WSKAZÓWKI:
+- PAMIĘTAJ O FORMALNYM STYLU I PRECYZYJNYM JĘZYKU.
+- Analiza musi być obiektywna i pozbawiona emocji.
+- Jeśli nie jesteś w 100 % pewien, że zdarzenie spełnia wszystkie kryteria, wskaż to wyraźnie w opinii.
+- Dane osobowe mają być pominięte (są celowo wymazywane).
+
+
 """
 
 
@@ -134,21 +143,26 @@ Umowa na wykonanie usługi została zawarta ustnie, praca nie została zakończo
 
     config = types.GenerateContentConfig(
         system_instruction=system_instruction_text,
-        temperature=0.1,
+        temperature=0.5,
         response_mime_type="application/json",
       response_schema=response_schema
     )
 
     # Retrieve and encode the PDF byte
-    filepath = pathlib.Path('pinput2.pdf')
+    filepath = pathlib.Path('pw3.pdf')
+    filepath2 = pathlib.Path('pz3.pdf')
 
-    prompt = "Przeanalizuj załączony dokument zgłoszenia wypadku przy pracy i wygeneruj opinię zgodnie z podanymi kryteriami oraz wypełnij schemat wyjściowy."
+    prompt = "Przeanalizuj załączone dokumenty zgłoszenia wypadku przy pracy i wygeneruj opinię zgodnie z podanymi kryteriami oraz wypełnij schemat wyjściowy."
     response = client.models.generate_content(
-      model="gemini-2.5-flash",
+      model="gemini-2.5-pro",
       config = config,
       contents=[
           types.Part.from_bytes(
             data=filepath.read_bytes(),
+            mime_type='application/pdf',
+          ),
+          types.Part.from_bytes(
+            data=filepath2.read_bytes(),
             mime_type='application/pdf',
           ),
           prompt])
@@ -160,7 +174,7 @@ Umowa na wykonanie usługi została zawarta ustnie, praca nie została zakończo
     #   config = config
     # )
 
-    print(response.text)
+    # print(response.text)
     
 
 if __name__ == "__main__":
