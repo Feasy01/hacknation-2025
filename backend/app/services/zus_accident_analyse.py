@@ -88,8 +88,18 @@ WAŻNE WSKAZÓWKI:
 """
 
 
-def zus_accident_analyse(source_files_bytes: list) -> dict:
+def zus_accident_analyse(source_files_bytes: list, mime_types: list = None) -> dict:
+    """
+    Analyze accident case from source files.
     
+    Args:
+        source_files_bytes: List of file bytes
+        mime_types: Optional list of MIME types corresponding to each file.
+                    If not provided, defaults to 'application/pdf' for all files.
+    
+    Returns:
+        JSON string with analysis results
+    """
     client = genai.Client()
 
     config = types.GenerateContentConfig(
@@ -99,16 +109,14 @@ def zus_accident_analyse(source_files_bytes: list) -> dict:
       response_schema=response_schema
     )
 
-    # Retrieve and encode the PDF byte
-    # filepath = pathlib.Path('pw3.pdf')
-    # filepath2 = pathlib.Path('pz3.pdf')
-
     contents = []
-    for file in source_files_bytes:
+    for idx, file_bytes in enumerate(source_files_bytes):
+        # Use provided MIME type or default to PDF
+        mime_type = mime_types[idx] if mime_types and idx < len(mime_types) else 'application/pdf'
         contents.append(
             types.Part.from_bytes(
-                data=file,
-                mime_type='application/pdf',
+                data=file_bytes,
+                mime_type=mime_type,
             )
         )
 

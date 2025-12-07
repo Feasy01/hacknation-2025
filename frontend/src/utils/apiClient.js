@@ -1,3 +1,5 @@
+import { mapFrontendFormToBackend } from './formMapping';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // Helper function to handle API responses
@@ -22,8 +24,10 @@ export const fetchHealth = async () => {
 export const applicationsApi = {
   // Create application
   create: async (formData, attachments = null) => {
+    // Convert frontend camelCase format to backend snake_case format
+    const backendFormData = mapFrontendFormToBackend(formData);
     const payload = {
-      form_data: formData,
+      form_data: backendFormData,
       status: 'draft',
       ...(attachments && attachments.length > 0 && { attachments }),
     };
@@ -239,6 +243,34 @@ export const elevenLabsApi = {
     const response = await fetch(
       `${API_BASE_URL}/api/elevenlabs/snapshot/${conversationId}`
     );
+
+    return handleResponse(response);
+  },
+};
+
+// ZUS Accident Analysis API
+export const accidentAnalysisApi = {
+  // Analyze accident case from uploaded documents
+  analyseAccident: async (files) => {
+    // Convert files to the expected format
+    const fileInputs = await Promise.all(
+      files.map(async (file) => {
+        const base64 = await fileToBase64(file);
+        return {
+          filename: file.name,
+          mime_type: file.type,
+          data: base64,
+        };
+      })
+    );
+
+    const response = await fetch(`${API_BASE_URL}/api/zus-accidents/analyse`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ files: fileInputs }),
+    });
 
     return handleResponse(response);
   },

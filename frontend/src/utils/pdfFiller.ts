@@ -1,234 +1,261 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, StandardFonts } from 'pdf-lib';
 import { AccidentReportFormData } from '@/types/accident-report';
 
 /**
- * Maps frontend form data to PDF form field names
- * Uses exact field keys from EWYP form specification
+ * Maps frontend form data to exact PDF form field names from EWYP PDF
+ * Uses the actual field names discovered from the PDF form
  */
-const createFieldMapping = (data: AccidentReportFormData): Record<string, string> => {
-  const mapping: Record<string, string> = {};
+const createFieldMapping = (data: AccidentReportFormData): Record<string, string | boolean> => {
+  const mapping: Record<string, string | boolean> = {};
 
-  // 1. dane_poszkodowanego - Dane osobowe
+  // ============================================
+  // PAGE 1: Dane poszkodowanego (Victim Data)
+  // ============================================
   if (data.poszkodowany) {
-    mapping['poszkodowany_pesel'] = data.poszkodowany.pesel || '';
-    mapping['poszkodowany_dokument_typ'] = data.poszkodowany.dokumentTyp || '';
-    mapping['poszkodowany_dokument_seria_numer'] = [
+    mapping['topmostSubform[0].Page1[0].PESEL[0]'] = data.poszkodowany.pesel || '';
+    mapping['topmostSubform[0].Page1[0].Imię[0]'] = data.poszkodowany.imie || '';
+    mapping['topmostSubform[0].Page1[0].Nazwisko[0]'] = data.poszkodowany.nazwisko || '';
+    mapping['topmostSubform[0].Page1[0].Dataurodzenia[0]'] = formatDate(data.poszkodowany.dataUrodzenia) || '';
+    mapping['topmostSubform[0].Page1[0].Miejsceurodzenia[0]'] = data.poszkodowany.miejsceUrodzenia || '';
+    mapping['topmostSubform[0].Page1[0].Numertelefonu[0]'] = data.poszkodowany.telefon || '';
+    
+    // Document type and number combined
+    const dokumentInfo = [
+      data.poszkodowany.dokumentTyp,
       data.poszkodowany.dokumentSeria,
       data.poszkodowany.dokumentNumer
     ].filter(Boolean).join(' ') || '';
-    mapping['poszkodowany_imie'] = data.poszkodowany.imie || '';
-    mapping['poszkodowany_nazwisko'] = data.poszkodowany.nazwisko || '';
-    mapping['poszkodowany_data_urodzenia'] = formatDate(data.poszkodowany.dataUrodzenia) || '';
-    mapping['poszkodowany_miejsce_urodzenia'] = data.poszkodowany.miejsceUrodzenia || '';
-    mapping['poszkodowany_telefon'] = data.poszkodowany.telefon || '';
+    mapping['topmostSubform[0].Page1[0].Rodzajseriainumerdokumentu[0]'] = dokumentInfo;
   }
 
-  // Adres zamieszkania poszkodowanego
+  // Adres zamieszkania poszkodowanego (Page1)
   if (data.adresZamieszkania) {
-    mapping['poszkodowany_adres_ulica'] = data.adresZamieszkania.ulica || '';
-    mapping['poszkodowany_adres_nr_domu'] = data.adresZamieszkania.nrDomu || '';
-    mapping['poszkodowany_adres_nr_lokalu'] = data.adresZamieszkania.nrLokalu || '';
-    mapping['poszkodowany_adres_kod'] = data.adresZamieszkania.kodPocztowy || '';
-    mapping['poszkodowany_adres_miejscowosc'] = data.adresZamieszkania.miejscowosc || '';
-    mapping['poszkodowany_adres_panstwo'] = data.adresZamieszkania.panstwo || 'Polska';
+    mapping['topmostSubform[0].Page1[0].Ulica[0]'] = data.adresZamieszkania.ulica || '';
+    mapping['topmostSubform[0].Page1[0].Numerdomu[0]'] = data.adresZamieszkania.nrDomu || '';
+    mapping['topmostSubform[0].Page1[0].Numerlokalu[0]'] = data.adresZamieszkania.nrLokalu || '';
+    mapping['topmostSubform[0].Page1[0].Kodpocztowy[0]'] = data.adresZamieszkania.kodPocztowy || '';
+    mapping['topmostSubform[0].Page1[0].Poczta[0]'] = data.adresZamieszkania.miejscowosc || '';
+    mapping['topmostSubform[0].Page1[0].Nazwapaństwa[0]'] = data.adresZamieszkania.panstwo || 'Polska';
   }
 
-  // Adres ostatniego zamieszkania / pobytu poszkodowanego
+  // Adres ostatniego zamieszkania / pobytu poszkodowanego w Polsce (Page1 - Ulica2A)
   if (data.ostatniAdresPL) {
-    mapping['poszkodowany_ostatni_adres_ulica'] = data.ostatniAdresPL.ulica || '';
-    mapping['poszkodowany_ostatni_adres_nr_domu'] = data.ostatniAdresPL.nrDomu || '';
-    mapping['poszkodowany_ostatni_adres_nr_lokalu'] = data.ostatniAdresPL.nrLokalu || '';
-    mapping['poszkodowany_ostatni_adres_kod'] = data.ostatniAdresPL.kodPocztowy || '';
-    mapping['poszkodowany_ostatni_adres_miejscowosc'] = data.ostatniAdresPL.miejscowosc || '';
+    mapping['topmostSubform[0].Page1[0].Ulica2A[0]'] = data.ostatniAdresPL.ulica || '';
+    mapping['topmostSubform[0].Page1[0].Numerdomu2A[0]'] = data.ostatniAdresPL.nrDomu || '';
+    mapping['topmostSubform[0].Page1[0].Numerlokalu2A[0]'] = data.ostatniAdresPL.nrLokalu || '';
+    mapping['topmostSubform[0].Page1[0].Kodpocztowy2A[0]'] = data.ostatniAdresPL.kodPocztowy || '';
+    mapping['topmostSubform[0].Page1[0].Poczta2A[0]'] = data.ostatniAdresPL.miejscowosc || '';
   }
 
-  // 2. adres_korespondencyjny_poszkodowanego
-  if (data.innyAdresKorespondencyjny && data.adresKorespondencyjny) {
-    const korresp = data.adresKorespondencyjny;
-    
-    // Map typ: 'adres' -> 'standard', 'poste-restante' -> 'poste_restante', 'skrytka' -> 'skrytka'
-    if (korresp.typ === 'adres') {
-      mapping['poszkodowany_korresp_typ'] = 'standard';
-      if (korresp.adres) {
-        mapping['poszkodowany_korresp_ulica'] = korresp.adres.ulica || '';
-        mapping['poszkodowany_korresp_nr_domu'] = korresp.adres.nrDomu || '';
-        mapping['poszkodowany_korresp_nr_lokalu'] = korresp.adres.nrLokalu || '';
-        mapping['poszkodowany_korresp_kod'] = korresp.adres.kodPocztowy || '';
-        mapping['poszkodowany_korresp_miejscowosc'] = korresp.adres.miejscowosc || '';
-        mapping['poszkodowany_korresp_panstwo'] = korresp.adres.panstwo || 'Polska';
-      }
-    } else if (korresp.typ === 'poste-restante') {
-      mapping['poszkodowany_korresp_typ'] = 'poste_restante';
-      // For poste-restante, we might need to handle differently
-      // This depends on how the PDF form handles this type
-    } else if (korresp.typ === 'skrytka') {
-      mapping['poszkodowany_korresp_typ'] = 'skrytka';
-      // For skrytka, we might need to handle differently
-    }
-  }
-
-  // 3. adres_dzialalnosci
-  if (data.adresDzialalnosci) {
-    mapping['dzialalnosc_ulica'] = data.adresDzialalnosci.ulica || '';
-    mapping['dzialalnosc_nr_domu'] = data.adresDzialalnosci.nrDomu || '';
-    mapping['dzialalnosc_nr_lokalu'] = data.adresDzialalnosci.nrLokalu || '';
-    mapping['dzialalnosc_kod'] = data.adresDzialalnosci.kodPocztowy || '';
-    mapping['dzialalnosc_miejscowosc'] = data.adresDzialalnosci.miejscowosc || '';
-    mapping['dzialalnosc_telefon'] = data.adresDzialalnosci.telefon || '';
-  }
-
-  // 4. adres_sprawowania_opieki (niania) - Not in current form data structure
-  // This would need to be added to the form if needed
-
-  // 5. dane_zglaszajacego (gdy nie poszkodowany)
+  // ============================================
+  // PAGE 2: Dane zgłaszającego (Reporter Data)
+  // ============================================
   if (data.zglaszajacyInny && data.zglaszajacy) {
-    // Dane osobowe
-    mapping['zglaszajacy_pesel'] = data.zglaszajacy.pesel || '';
-    mapping['zglaszajacy_dokument_typ'] = data.zglaszajacy.dokumentTyp || '';
-    mapping['zglaszajacy_dokument_seria_numer'] = [
+    mapping['topmostSubform[0].Page2[0].PESEL[0]'] = data.zglaszajacy.pesel || '';
+    mapping['topmostSubform[0].Page2[0].Imię[0]'] = data.zglaszajacy.imie || '';
+    mapping['topmostSubform[0].Page2[0].Nazwisko[0]'] = data.zglaszajacy.nazwisko || '';
+    
+    // Document type and number combined
+    const zglaszajacyDokumentInfo = [
+      data.zglaszajacy.dokumentTyp,
       data.zglaszajacy.dokumentSeria,
       data.zglaszajacy.dokumentNumer
     ].filter(Boolean).join(' ') || '';
-    mapping['zglaszajacy_imie'] = data.zglaszajacy.imie || '';
-    mapping['zglaszajacy_nazwisko'] = data.zglaszajacy.nazwisko || '';
-    mapping['zglaszajacy_data_urodzenia'] = formatDate(data.zglaszajacy.dataUrodzenia) || '';
-    mapping['zglaszajacy_telefon'] = data.zglaszajacy.telefon || '';
+    mapping['topmostSubform[0].Page2[0].Rodzajseriainumerdokumentu[0]'] = zglaszajacyDokumentInfo;
 
-    // Adres zamieszkania zgłaszającego
+    // Adres zamieszkania zgłaszającego (Page2)
     if (data.zglaszajacyAdresZamieszkania) {
-      mapping['zglaszajacy_adres_ulica'] = data.zglaszajacyAdresZamieszkania.ulica || '';
-      mapping['zglaszajacy_adres_nr_domu'] = data.zglaszajacyAdresZamieszkania.nrDomu || '';
-      mapping['zglaszajacy_adres_nr_lokalu'] = data.zglaszajacyAdresZamieszkania.nrLokalu || '';
-      mapping['zglaszajacy_adres_kod'] = data.zglaszajacyAdresZamieszkania.kodPocztowy || '';
-      mapping['zglaszajacy_adres_miejscowosc'] = data.zglaszajacyAdresZamieszkania.miejscowosc || '';
-      mapping['zglaszajacy_adres_panstwo'] = data.zglaszajacyAdresZamieszkania.panstwo || 'Polska';
+      mapping['topmostSubform[0].Page2[0].Ulica[0]'] = data.zglaszajacyAdresZamieszkania.ulica || '';
+      mapping['topmostSubform[0].Page2[0].Numerdomu[0]'] = data.zglaszajacyAdresZamieszkania.nrDomu || '';
+      mapping['topmostSubform[0].Page2[0].Numerlokalu[0]'] = data.zglaszajacyAdresZamieszkania.nrLokalu || '';
+      mapping['topmostSubform[0].Page2[0].Kodpocztowy[0]'] = data.zglaszajacyAdresZamieszkania.kodPocztowy || '';
+      mapping['topmostSubform[0].Page2[0].Poczta[0]'] = data.zglaszajacyAdresZamieszkania.miejscowosc || '';
+      mapping['topmostSubform[0].Page2[0].Numertelefonu[0]'] = data.zglaszajacy.telefon || '';
+      mapping['topmostSubform[0].Page2[0].Nazwapaństwa2[0]'] = data.zglaszajacyAdresZamieszkania.panstwo || 'Polska';
     }
 
-    // Adres ostatniego zamieszkania / pobytu zgłaszającego
+    // Adres ostatniego zamieszkania / pobytu zgłaszającego w Polsce (Page2 - Ulica2[1])
     if (data.zglaszajacyOstatniAdresPL) {
-      mapping['zglaszajacy_ostatni_adres_ulica'] = data.zglaszajacyOstatniAdresPL.ulica || '';
-      mapping['zglaszajacy_ostatni_adres_nr_domu'] = data.zglaszajacyOstatniAdresPL.nrDomu || '';
-      mapping['zglaszajacy_ostatni_adres_nr_lokalu'] = data.zglaszajacyOstatniAdresPL.nrLokalu || '';
-      mapping['zglaszajacy_ostatni_adres_kod'] = data.zglaszajacyOstatniAdresPL.kodPocztowy || '';
-      mapping['zglaszajacy_ostatni_adres_miejscowosc'] = data.zglaszajacyOstatniAdresPL.miejscowosc || '';
+      mapping['topmostSubform[0].Page2[0].Ulica2[1]'] = data.zglaszajacyOstatniAdresPL.ulica || '';
+      mapping['topmostSubform[0].Page2[0].Numerdomu2[1]'] = data.zglaszajacyOstatniAdresPL.nrDomu || '';
+      mapping['topmostSubform[0].Page2[0].Numerlokalu2[1]'] = data.zglaszajacyOstatniAdresPL.nrLokalu || '';
+      mapping['topmostSubform[0].Page2[0].Kodpocztowy2[1]'] = data.zglaszajacyOstatniAdresPL.kodPocztowy || '';
+      mapping['topmostSubform[0].Page2[0].Poczta2[1]'] = data.zglaszajacyOstatniAdresPL.miejscowosc || '';
     }
 
-    // Adres korespondencyjny zgłaszającego
+    // Adres korespondencyjny zgłaszającego (Page2 - Ulica2[0])
     if (data.zglaszajacyInnyAdresKorespondencyjny && data.zglaszajacyAdresKorespondencyjny) {
       const korresp = data.zglaszajacyAdresKorespondencyjny;
       
-      if (korresp.typ === 'adres') {
-        mapping['zglaszajacy_korresp_typ'] = 'standard';
-        if (korresp.adres) {
-          mapping['zglaszajacy_korresp_ulica'] = korresp.adres.ulica || '';
-          mapping['zglaszajacy_korresp_nr_domu'] = korresp.adres.nrDomu || '';
-          mapping['zglaszajacy_korresp_nr_lokalu'] = korresp.adres.nrLokalu || '';
-          mapping['zglaszajacy_korresp_kod'] = korresp.adres.kodPocztowy || '';
-          mapping['zglaszajacy_korresp_miejscowosc'] = korresp.adres.miejscowosc || '';
-          mapping['zglaszajacy_korresp_panstwo'] = korresp.adres.panstwo || 'Polska';
-        }
-      } else if (korresp.typ === 'poste-restante') {
-        mapping['zglaszajacy_korresp_typ'] = 'poste_restante';
-      } else if (korresp.typ === 'skrytka') {
-        mapping['zglaszajacy_korresp_typ'] = 'skrytka';
+      // Set checkboxes for correspondence address type
+      mapping['topmostSubform[0].Page2[0].adres[0]'] = korresp.typ === 'adres';
+      mapping['topmostSubform[0].Page2[0].posterestante[0]'] = korresp.typ === 'poste-restante';
+      mapping['topmostSubform[0].Page2[0].skrytkapocztowa[0]'] = korresp.typ === 'skrytka';
+      mapping['topmostSubform[0].Page2[0].przegrodkapocztowa[0]'] = false; // Not used in our form
+      
+      if (korresp.typ === 'adres' && korresp.adres) {
+        mapping['topmostSubform[0].Page2[0].Ulica2[0]'] = korresp.adres.ulica || '';
+        mapping['topmostSubform[0].Page2[0].Numerdomu2[0]'] = korresp.adres.nrDomu || '';
+        mapping['topmostSubform[0].Page2[0].Numerlokalu2[0]'] = korresp.adres.nrLokalu || '';
+        mapping['topmostSubform[0].Page2[0].Kodpocztowy2[0]'] = korresp.adres.kodPocztowy || '';
+        mapping['topmostSubform[0].Page2[0].Poczta2[0]'] = korresp.adres.miejscowosc || '';
+        mapping['topmostSubform[0].Page2[0].Numertelefonu2[0]'] = ''; // Not in our form data
       }
     }
   }
 
-  // 6. informacje_o_wypadku
+  // ============================================
+  // PAGE 3: Informacje o wypadku (Accident Details)
+  // ============================================
   if (data.szczegoly) {
     const szczegoly = data.szczegoly;
-    mapping['wypadek_data'] = formatDate(szczegoly.data) || '';
-    mapping['wypadek_godzina'] = szczegoly.godzina || '';
-    mapping['wypadek_miejsce'] = szczegoly.miejsce || '';
-    mapping['wypadek_plan_start'] = szczegoly.godzinaRozpoczeciaPracy || '';
-    mapping['wypadek_plan_koniec'] = szczegoly.godzinaZakonczeniaPracy || '';
-    mapping['wypadek_rodzaj_urazow'] = szczegoly.opisUrazow || '';
-    mapping['wypadek_opis'] = szczegoly.opisOkolicznosci || '';
     
-    // Pierwsza pomoc
-    mapping['wypadek_pierwsza_pomoc'] = szczegoly.pierwszaPomoc ? 'TAK' : 'NIE';
-    if (szczegoly.pierwszaPomoc) {
-      mapping['wypadek_pierwsza_pomoc_placowka'] = szczegoly.pierwszaPomocNazwa || '';
-      // If pierwszaPomocAdres is provided, it might need to be combined with nazwa
-      if (szczegoly.pierwszaPomocAdres) {
-        mapping['wypadek_pierwsza_pomoc_placowka'] = [
-          szczegoly.pierwszaPomocNazwa,
-          szczegoly.pierwszaPomocAdres
-        ].filter(Boolean).join(', ') || '';
+    mapping['topmostSubform[0].Page3[0].Datawyp[0]'] = formatDate(szczegoly.data) || '';
+    mapping['topmostSubform[0].Page3[0].Godzina[0]'] = szczegoly.godzina || '';
+    mapping['topmostSubform[0].Page3[0].Miejscewyp[0]'] = szczegoly.miejsce || '';
+    mapping['topmostSubform[0].Page3[0].Godzina3A[0]'] = szczegoly.godzinaRozpoczeciaPracy || '';
+    mapping['topmostSubform[0].Page3[0].Godzina3B[0]'] = szczegoly.godzinaZakonczeniaPracy || '';
+    
+    // Adres działalności (Page3)
+    if (data.adresDzialalnosci) {
+      mapping['topmostSubform[0].Page3[0].Ulica3[0]'] = data.adresDzialalnosci.ulica || '';
+      mapping['topmostSubform[0].Page3[0].Numerdomu3[0]'] = data.adresDzialalnosci.nrDomu || '';
+      mapping['topmostSubform[0].Page3[0].Numerlokalu3[0]'] = data.adresDzialalnosci.nrLokalu || '';
+      mapping['topmostSubform[0].Page3[0].Kodpocztowy3[0]'] = data.adresDzialalnosci.kodPocztowy || '';
+      mapping['topmostSubform[0].Page3[0].Poczta3[0]'] = data.adresDzialalnosci.miejscowosc || '';
+      mapping['topmostSubform[0].Page3[0].Numertelefonu3[0]'] = data.adresDzialalnosci.telefon || '';
+    }
+
+    // Adres korespondencyjny poszkodowanego (Page3)
+    if (data.innyAdresKorespondencyjny && data.adresKorespondencyjny) {
+      const korresp = data.adresKorespondencyjny;
+      
+      // Set checkboxes for correspondence address type
+      mapping['topmostSubform[0].Page3[0].adres[0]'] = korresp.typ === 'adres';
+      mapping['topmostSubform[0].Page3[0].posterestante[0]'] = korresp.typ === 'poste-restante';
+      mapping['topmostSubform[0].Page3[0].skrytkapocztowa[0]'] = korresp.typ === 'skrytka';
+      mapping['topmostSubform[0].Page3[0].przegrodkapocztowa[0]'] = false; // Not used in our form
+      
+      if (korresp.typ === 'adres' && korresp.adres) {
+        mapping['topmostSubform[0].Page3[0].Ulica2[0]'] = korresp.adres.ulica || '';
+        mapping['topmostSubform[0].Page3[0].Numerdomu2[0]'] = korresp.adres.nrDomu || '';
+        mapping['topmostSubform[0].Page3[0].Numerlokalu2[0]'] = korresp.adres.nrLokalu || '';
+        mapping['topmostSubform[0].Page3[0].Kodpocztowy2[0]'] = korresp.adres.kodPocztowy || '';
+        mapping['topmostSubform[0].Page3[0].Poczta2[0]'] = korresp.adres.miejscowosc || '';
       }
+      
+      // Ulica2A fields for poszkodowany correspondence (if different from main address)
+      if (korresp.typ === 'adres' && korresp.adres) {
+        mapping['topmostSubform[0].Page3[0].Ulica2A[0]'] = korresp.adres.ulica || '';
+        mapping['topmostSubform[0].Page3[0].Numerdomu2A[0]'] = korresp.adres.nrDomu || '';
+        mapping['topmostSubform[0].Page3[0].Numerlokalu2A[0]'] = korresp.adres.nrLokalu || '';
+        mapping['topmostSubform[0].Page3[0].Kodpocztowy2A[0]'] = korresp.adres.kodPocztowy || '';
+        mapping['topmostSubform[0].Page3[0].Poczta2A[0]'] = korresp.adres.miejscowosc || '';
+      }
+    }
+    
+    mapping['topmostSubform[0].Page3[0].Dataurodzenia[0]'] = formatDate(data.poszkodowany?.dataUrodzenia) || '';
+    mapping['topmostSubform[0].Page3[0].Nazwapaństwa3[0]'] = data.adresZamieszkania?.panstwo || 'Polska';
+    mapping['topmostSubform[0].Page3[0].Nazwapaństwa2[0]'] = data.adresDzialalnosci?.panstwo || 'Polska';
+  }
+
+  // ============================================
+  // PAGE 4: Szczegóły wypadku (Accident Details Continued)
+  // ============================================
+  if (data.szczegoly) {
+    const szczegoly = data.szczegoly;
+    
+    // Opis urazów i okoliczności
+    mapping['topmostSubform[0].Page4[0].Tekst4[0]'] = szczegoly.opisUrazow || '';
+    mapping['topmostSubform[0].Page4[0].Tekst5[0]'] = szczegoly.opisOkolicznosci || '';
+    
+    // Pierwsza pomoc medyczna
+    mapping['topmostSubform[0].Page4[0].TAK6[0]'] = szczegoly.pierwszaPomoc;
+    mapping['topmostSubform[0].Page4[0].NIE6[0]'] = !szczegoly.pierwszaPomoc;
+    if (szczegoly.pierwszaPomoc) {
+      const pierwszaPomocInfo = [
+        szczegoly.pierwszaPomocNazwa,
+        szczegoly.pierwszaPomocAdres
+      ].filter(Boolean).join(', ') || '';
+      mapping['topmostSubform[0].Page4[0].Tekst6[0]'] = pierwszaPomocInfo;
     }
     
     // Postępowanie prowadzone
+    mapping['topmostSubform[0].Page4[0].TAK8[0]'] = szczegoly.postepowanieProwadzone;
+    mapping['topmostSubform[0].Page4[0].NIE8[0]'] = !szczegoly.postepowanieProwadzone;
     if (szczegoly.postepowanieProwadzone) {
-      mapping['wypadek_prowadzone_postepowanie_organ'] = szczegoly.postepowanieOrgan || '';
-      // If postepowanieAdres is provided, it might need to be combined
-      if (szczegoly.postepowanieAdres) {
-        mapping['wypadek_prowadzone_postepowanie_organ'] = [
-          szczegoly.postepowanieOrgan,
-          szczegoly.postepowanieAdres
-        ].filter(Boolean).join(', ') || '';
-      }
+      const postepowanieInfo = [
+        szczegoly.postepowanieOrgan,
+        szczegoly.postepowanieAdres
+      ].filter(Boolean).join(', ') || '';
+      mapping['topmostSubform[0].Page4[0].Tekst7[0]'] = postepowanieInfo;
     }
     
-    // Maszyny
-    mapping['wypadek_czy_maszyny'] = szczegoly.obslugaMaszyn ? 'TAK' : 'NIE';
+    // Obsługa maszyn
+    mapping['topmostSubform[0].Page4[0].TAK9[0]'] = szczegoly.obslugaMaszyn;
+    mapping['topmostSubform[0].Page4[0].NIE9[0]'] = !szczegoly.obslugaMaszyn;
     if (szczegoly.obslugaMaszyn) {
-      mapping['wypadek_maszyny_szczegoly'] = szczegoly.maszynyOpis || '';
-      mapping['wypadek_maszyny_atest'] = szczegoly.atestDeklaracja ? 'TAK' : 'NIE';
-      mapping['wypadek_maszyny_ewidencja'] = szczegoly.ewidencjaSrodkowTrwalych ? 'TAK' : 'NIE';
+      mapping['topmostSubform[0].Page4[0].Tekst8[0]'] = szczegoly.maszynyOpis || '';
+    }
+    
+    // Atest/deklaracja zgodności
+    mapping['topmostSubform[0].Page4[0].TAK10[0]'] = szczegoly.atestDeklaracja;
+    mapping['topmostSubform[0].Page4[0].NIE10[0]'] = !szczegoly.atestDeklaracja;
+  }
+
+  // ============================================
+  // PAGE 5: Świadkowie (Witnesses)
+  // ============================================
+  if (data.swiadkowie && data.swiadkowie.length > 0) {
+    // Witness 1 (index 0)
+    if (data.swiadkowie[0]) {
+      const sw1 = data.swiadkowie[0];
+      mapping['topmostSubform[0].Page5[0].Imię[0]'] = sw1.imie || '';
+      mapping['topmostSubform[0].Page5[0].Nazwisko[0]'] = sw1.nazwisko || '';
+      mapping['topmostSubform[0].Page5[0].Ulica[0]'] = sw1.ulica || '';
+      mapping['topmostSubform[0].Page5[0].Numerdomu[0]'] = sw1.nrDomu || '';
+      mapping['topmostSubform[0].Page5[0].Numerlokalu[0]'] = sw1.nrLokalu || '';
+      mapping['topmostSubform[0].Page5[0].Kodpocztowy[0]'] = sw1.kodPocztowy || '';
+      mapping['topmostSubform[0].Page5[0].Poczta[0]'] = sw1.miejscowosc || '';
+      mapping['topmostSubform[0].Page5[0].Nazwapaństwa[0]'] = sw1.panstwo || 'Polska';
+    }
+    
+    // Witness 2 (index 1)
+    if (data.swiadkowie[1]) {
+      const sw2 = data.swiadkowie[1];
+      mapping['topmostSubform[0].Page5[0].Imię[1]'] = sw2.imie || '';
+      mapping['topmostSubform[0].Page5[0].Nazwisko[1]'] = sw2.nazwisko || '';
+      mapping['topmostSubform[0].Page5[0].Ulica[1]'] = sw2.ulica || '';
+      mapping['topmostSubform[0].Page5[0].Numerdomu[1]'] = sw2.nrDomu || '';
+      mapping['topmostSubform[0].Page5[0].Numerlokalu[1]'] = sw2.nrLokalu || '';
+      mapping['topmostSubform[0].Page5[0].Kodpocztowy[1]'] = sw2.kodPocztowy || '';
+      mapping['topmostSubform[0].Page5[0].Poczta[1]'] = sw2.miejscowosc || '';
+      mapping['topmostSubform[0].Page5[0].Nazwapaństwa[1]'] = sw2.panstwo || 'Polska';
+    }
+    
+    // Witness 3 (index 2)
+    if (data.swiadkowie[2]) {
+      const sw3 = data.swiadkowie[2];
+      mapping['topmostSubform[0].Page5[0].Imię2[0]'] = sw3.imie || '';
+      mapping['topmostSubform[0].Page5[0].Nazwisko2[0]'] = sw3.nazwisko || '';
+      mapping['topmostSubform[0].Page5[0].Ulica2[0]'] = sw3.ulica || '';
+      mapping['topmostSubform[0].Page5[0].Numerdomu2[0]'] = sw3.nrDomu || '';
+      mapping['topmostSubform[0].Page5[0].Numerlokalu2[0]'] = sw3.nrLokalu || '';
+      mapping['topmostSubform[0].Page5[0].Kodpocztowy2[0]'] = sw3.kodPocztowy || '';
+      mapping['topmostSubform[0].Page5[0].Poczta2[0]'] = sw3.miejscowosc || '';
+      mapping['topmostSubform[0].Page5[0].Nazwapaństwa2[0]'] = sw3.panstwo || 'Polska';
     }
   }
 
-  // 7. swiadkowie[] - Array of 0-3 witnesses
-  // Each witness has: imie, nazwisko, ulica, nr_domu, nr_lokalu, kod, miejscowosc, panstwo
-  if (data.swiadkowie && data.swiadkowie.length > 0) {
-    // PDF forms typically use numbered field names (swiadek_1_imie) or array notation (swiadkowie[0].imie)
-    // We'll provide both patterns to ensure compatibility
-    data.swiadkowie.slice(0, 3).forEach((swiadek, index) => {
-      const baseIndex = index; // 0-based for array notation
-      const displayIndex = index + 1; // 1-based for numbered fields
-      
-      // Array notation (e.g., swiadkowie[0].imie)
-      mapping[`swiadkowie[${baseIndex}].imie`] = swiadek.imie || '';
-      mapping[`swiadkowie[${baseIndex}].nazwisko`] = swiadek.nazwisko || '';
-      mapping[`swiadkowie[${baseIndex}].ulica`] = swiadek.ulica || '';
-      mapping[`swiadkowie[${baseIndex}].nr_domu`] = swiadek.nrDomu || '';
-      mapping[`swiadkowie[${baseIndex}].nr_lokalu`] = swiadek.nrLokalu || '';
-      mapping[`swiadkowie[${baseIndex}].kod`] = swiadek.kodPocztowy || '';
-      mapping[`swiadkowie[${baseIndex}].miejscowosc`] = swiadek.miejscowosc || '';
-      mapping[`swiadkowie[${baseIndex}].panstwo`] = swiadek.panstwo || 'Polska';
-      
-      // Numbered notation as fallback (e.g., swiadek_1_imie)
-      mapping[`swiadek_${displayIndex}_imie`] = swiadek.imie || '';
-      mapping[`swiadek_${displayIndex}_nazwisko`] = swiadek.nazwisko || '';
-      mapping[`swiadek_${displayIndex}_ulica`] = swiadek.ulica || '';
-      mapping[`swiadek_${displayIndex}_nr_domu`] = swiadek.nrDomu || '';
-      mapping[`swiadek_${displayIndex}_nr_lokalu`] = swiadek.nrLokalu || '';
-      mapping[`swiadek_${displayIndex}_kod`] = swiadek.kodPocztowy || '';
-      mapping[`swiadek_${displayIndex}_miejscowosc`] = swiadek.miejscowosc || '';
-      mapping[`swiadek_${displayIndex}_panstwo`] = swiadek.panstwo || 'Polska';
-    });
-  }
-
-  // 8. zalaczniki - Not in current form data structure
-  // These would need to be added if needed:
-  // mapping['zalacznik_karta_informacyjna'] = false;
-  // mapping['zalacznik_postanowienie_prokuratury'] = false;
-  // mapping['zalacznik_dokumenty_dot_zgonu'] = false;
-  // mapping['zalacznik_dokumenty_prawa_do_karty'] = false;
-  // mapping['zalacznik_inne'] = '';
-  // mapping['do_dnia_data'] = '';
-  // mapping['zobowiazanie_dokumenty'] = ['', '', '', '', '', '', '', ''];
-
-  // 9. sposob_odbioru - Not in current form data structure
-  // mapping['odbior_w_placowce'] = false;
-  // mapping['odbior_poczta_pue'] = false;
-  // mapping['odbior_przez_upowazniona'] = false;
-
-  // 10. podpis - Not in current form data structure
-  // mapping['data_podpisu'] = '';
-  // mapping['podpis'] = '';
+  // ============================================
+  // PAGE 6: Załączniki i sposób odbioru (Attachments & Delivery)
+  // ============================================
+  // Note: These fields are not in our current form data structure
+  // They would need to be added if needed:
+  // - wplacowce[0], poczta[0], PUE[0] (delivery method checkboxes)
+  // - ZaznaczX1[0] through ZaznaczX5[0] (attachment checkboxes)
+  // - Inne[0], Inne1[0] through Inne8[0] (other fields)
+  // - Data[0], Data[1] (date fields)
 
   return mapping;
 };
@@ -255,6 +282,7 @@ function formatDate(dateString: string | undefined): string {
 
 /**
  * Fills PDF form with form data and returns the filled PDF as a blob
+ * Uses exact field names from the PDF form
  */
 export async function fillPdfForm(
   pdfTemplatePath: string,
@@ -268,148 +296,93 @@ export async function fillPdfForm(
     // Get the form
     const form = pdfDoc.getForm();
     
-    // Get all field names from the PDF
-    const fields = form.getFields();
-    const fieldNames = fields.map(field => field.getName());
+    // Optional: embed a font and update appearances for better rendering
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    form.updateFieldAppearances(font);
     
-    // Log available fields for debugging (only in development)
-    if (import.meta.env.DEV) {
-      console.log('Available PDF form fields:', fieldNames);
-    }
-    
-    // Create mapping from form data
+    // Create mapping from form data (returns exact PDF field names)
     const fieldMapping = createFieldMapping(formData);
     
-    // Helper function to find field by name (case-insensitive, partial match)
-    const findFieldByName = (searchName: string) => {
-      const lowerSearch = searchName.toLowerCase().replace(/[_\s]/g, '');
-      return fieldNames.find(fieldName => {
-        const lowerField = fieldName.toLowerCase().replace(/[_\s]/g, '');
-        return lowerField === lowerSearch || lowerField.includes(lowerSearch) || lowerSearch.includes(lowerField);
-      });
-    };
-    
-    // Helper function to set field value
-    const setFieldValue = (fieldName: string, value: string) => {
+    // Fill each field using exact field names
+    for (const [fieldName, value] of Object.entries(fieldMapping)) {
+      // Skip empty strings and undefined/null values
+      if (value === undefined || value === null || value === '') {
+        continue;
+      }
+      
       try {
-        const field = form.getTextField(fieldName);
-        field.setText(String(value));
-        return true;
-      } catch {
+        // Try to get the field (will throw if doesn't exist)
+        let field;
         try {
-          const field = form.getCheckBox(fieldName);
-          if (value === 'X' || value === 'Tak' || value === 'true') {
-            field.check();
-          } else {
-            field.uncheck();
-          }
-          return true;
+          field = form.getField(fieldName);
         } catch {
-          try {
-            const field = form.getRadioGroup(fieldName);
-            // For radio groups, we'd need to know the option value
-            // This is a simplified approach
-            return false;
-          } catch {
-            // Field might not exist or be of different type
-            return false;
+          // Field doesn't exist - skip it (might be optional)
+          if (import.meta.env.DEV) {
+            console.warn(`Field not found: ${fieldName}`);
           }
+          continue;
         }
-      }
-    };
-    
-    // Try to fill fields using various naming patterns
-    // First, try exact matches (case-insensitive)
-    for (const [mapKey, value] of Object.entries(fieldMapping)) {
-      if (!value) continue;
-      
-      // Try exact match first
-      const exactMatch = findFieldByName(mapKey);
-      if (exactMatch && setFieldValue(exactMatch, value)) {
-        continue;
-      }
-      
-      // Try without underscores
-      const noUnderscore = mapKey.replace(/_/g, '');
-      const matchNoUnderscore = findFieldByName(noUnderscore);
-      if (matchNoUnderscore && setFieldValue(matchNoUnderscore, value)) {
-        continue;
-      }
-    }
-    
-    // Try common field name variations (fallback patterns for PDF forms with different naming)
-    const commonMappings: Record<string, string[]> = {
-      'poszkodowany_imie': ['imie', 'imię', 'imie_poszkodowanego'],
-      'poszkodowany_nazwisko': ['nazwisko', 'nazwisko_poszkodowanego'],
-      'poszkodowany_pesel': ['pesel', 'pesel_poszkodowanego', 'numer_pesel'],
-      'poszkodowany_data_urodzenia': ['data_urodzenia', 'data_urodzenia_poszkodowanego'],
-      'poszkodowany_dokument_typ': ['dokument_typ', 'typ_dokumentu'],
-      'poszkodowany_dokument_seria_numer': ['dokument_seria_numer', 'dokument_seria', 'dokument_numer'],
-      'wypadek_data': ['data_wypadku', 'data', 'data_zdarzenia'],
-      'wypadek_godzina': ['godzina_wypadku', 'godzina', 'godzina_zdarzenia'],
-      'wypadek_miejsce': ['miejsce_wypadku', 'miejsce', 'miejsce_zdarzenia'],
-      'wypadek_plan_start': ['godzina_rozpoczecia', 'plan_start', 'rozpoczecie'],
-      'wypadek_plan_koniec': ['godzina_zakonczenia', 'plan_koniec', 'zakonczenie'],
-      'wypadek_opis': ['opis_okolicznosci', 'opis_wypadku', 'okolicznosci', 'przebieg'],
-      'wypadek_rodzaj_urazow': ['opis_urazow', 'urazy', 'szkody', 'rodzaj_urazow'],
-      'wypadek_pierwsza_pomoc': ['pierwsza_pomoc', 'pierwsza_pomoc_tak', 'pierwsza_pomoc_nie'],
-      'zglaszajacy_imie': ['imie_zglaszajacego', 'imie'],
-      'zglaszajacy_nazwisko': ['nazwisko_zglaszajacego', 'nazwisko'],
-    };
-    
-    // Try alternative field names from common mappings
-    for (const [key, alternatives] of Object.entries(commonMappings)) {
-      const value = fieldMapping[key];
-      if (!value) continue;
-      
-      // Check if we already filled this field
-      let filled = false;
-      for (const altName of alternatives) {
-        const match = findFieldByName(altName);
-        if (match && setFieldValue(match, value)) {
-          filled = true;
-          break;
-        }
-      }
-      
-      // If not filled, try partial matching
-      if (!filled) {
-        for (const fieldName of fieldNames) {
-          const lowerFieldName = fieldName.toLowerCase().replace(/[_\s]/g, '');
-          const lowerKey = key.toLowerCase().replace(/[_\s]/g, '');
-          
-          if (lowerFieldName.includes(lowerKey) || lowerKey.includes(lowerFieldName)) {
-            if (setFieldValue(fieldName, value)) {
-              break;
+        
+        const fieldType = field.constructor.name;
+        
+        // Handle different field types (including variants like PDFTextField2, PDFCheckBox2)
+        if (fieldType.startsWith('PDFTextField')) {
+          const textField = field as any;
+          textField.setText(String(value));
+        } else if (fieldType.startsWith('PDFCheckBox')) {
+          const checkBox = field as any;
+          if (typeof value === 'boolean') {
+            if (value) {
+              checkBox.check();
+            } else {
+              checkBox.uncheck();
+            }
+          } else if (typeof value === 'string') {
+            // Handle string values like 'true', 'false', 'X', etc.
+            const shouldCheck = value === 'true' || value === 'X' || value.toLowerCase() === 'tak';
+            if (shouldCheck) {
+              checkBox.check();
+            } else {
+              checkBox.uncheck();
+            }
+          }
+        } else if (fieldType.startsWith('PDFRadioGroup')) {
+          const radioGroup = field as any;
+          // For radio groups, select the option value
+          radioGroup.select(String(value));
+        } else {
+          // Unknown field type - try to set as text as fallback
+          try {
+            const textField = field as any;
+            if (typeof textField.setText === 'function') {
+              textField.setText(String(value));
+            } else {
+              if (import.meta.env.DEV) {
+                console.warn(`Unknown field type ${fieldType} for field: ${fieldName}`);
+              }
+            }
+          } catch {
+            if (import.meta.env.DEV) {
+              console.warn(`Unknown field type ${fieldType} for field: ${fieldName}`);
             }
           }
         }
-      }
-    }
-    
-    // Final pass: try to match any remaining fields by partial name matching
-    for (const [mapKey, mapValue] of Object.entries(fieldMapping)) {
-      if (!mapValue) continue;
-      
-      // Skip if already processed
-      let alreadyFilled = false;
-      for (const fieldName of fieldNames) {
-        const lowerFieldName = fieldName.toLowerCase().replace(/[_\s]/g, '');
-        const lowerKey = mapKey.toLowerCase().replace(/[_\s]/g, '');
-        
-        // Check if this field might match
-        if (lowerFieldName.includes(lowerKey) || lowerKey.includes(lowerFieldName)) {
-          if (setFieldValue(fieldName, mapValue)) {
-            alreadyFilled = true;
-            break;
-          }
+      } catch (error) {
+        // Field might not exist or be of different type - log in dev mode
+        if (import.meta.env.DEV) {
+          console.warn(`Error setting field ${fieldName}:`, error);
         }
       }
     }
     
+    // Optional: Flatten the form to make fields non-editable
+    // form.flatten();
+    
     // Save the PDF
     const pdfBytesFilled = await pdfDoc.save();
-    return new Blob([pdfBytesFilled], { type: 'application/pdf' });
+    // Convert to standard Uint8Array for Blob compatibility
+    const bytes = new Uint8Array(pdfBytesFilled);
+    return new Blob([bytes], { type: 'application/pdf' });
   } catch (error) {
     console.error('Error filling PDF form:', error);
     throw new Error('Nie udało się wypełnić formularza PDF. Sprawdź konsolę przeglądarki.');
@@ -428,5 +401,82 @@ export function downloadPdf(blob: Blob, filename: string = 'zawiadomienie_wypade
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Logs all field names from the EWYP PDF form
+ * Run this in browser console to see all available field names
+ * 
+ * Usage:
+ *   import { logEwypFieldNames } from '@/utils/pdfFiller';
+ *   logEwypFieldNames();
+ */
+export async function logEwypFieldNames(): Promise<void> {
+  try {
+    const templateBytes = await fetch('/EWYP_wypelnij_i_wydrukuj.pdf')
+      .then(r => r.arrayBuffer());
+    
+    const pdfDoc = await PDFDocument.load(templateBytes);
+    const form = pdfDoc.getForm();
+    
+    const fields = form.getFields();
+    
+    console.group('📋 EWYP PDF Form Fields');
+    console.log(`Total fields: ${fields.length}\n`);
+    
+    // Group fields by type
+    const fieldsByType: Record<string, Array<{ name: string; type: string }>> = {};
+    
+    fields.forEach(field => {
+      const type = field.constructor.name;
+      const name = field.getName();
+      
+      if (!fieldsByType[type]) {
+        fieldsByType[type] = [];
+      }
+      
+      fieldsByType[type].push({ name, type });
+    });
+    
+    // Log each type group
+    Object.entries(fieldsByType).forEach(([type, fieldList]) => {
+      console.group(`${type} (${fieldList.length})`);
+      fieldList.forEach(({ name }) => {
+        console.log(`  "${name}"`);
+      });
+      console.groupEnd();
+    });
+    
+    // Also log as a flat array for easy copying
+    console.group('📋 All Field Names (for copying)');
+    const allNames = fields.map(f => f.getName());
+    console.log(JSON.stringify(allNames, null, 2));
+    console.groupEnd();
+    
+    // Log as a mapping object template
+    console.group('📋 Field Mapping Template');
+    const mappingTemplate: Record<string, string> = {};
+    fields.forEach(field => {
+      const name = field.getName();
+      const type = field.constructor.name;
+      
+      if (type === 'PDFTextField') {
+        mappingTemplate[name] = '';
+      } else if (type === 'PDFCheckBox') {
+        mappingTemplate[name] = 'false'; // or true
+      } else if (type === 'PDFRadioGroup') {
+        mappingTemplate[name] = ''; // value of option to select
+      }
+    });
+    console.log(JSON.stringify(mappingTemplate, null, 2));
+    console.groupEnd();
+    
+    console.groupEnd();
+    
+    return;
+  } catch (error) {
+    console.error('Error reading PDF fields:', error);
+    throw error;
+  }
 }
 

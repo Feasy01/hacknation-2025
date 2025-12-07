@@ -3,18 +3,34 @@ import { ZusLayout } from '@/components/layout/ZusLayout';
 import { AccidentReportForm } from '@/components/accident-report/AccidentReportForm';
 import { ElevenLabsWidget } from '@/components/accident-report/ElevenLabsWidget';
 import { ModeSelector } from '@/components/accident-report/ModeSelector';
+import { OfficerView } from '@/components/officer/OfficerView';
+import { useOfficerView } from '@/contexts/OfficerViewContext';
 
 type ViewState = 'dashboard' | 'accident-form';
 
 const Index: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('dashboard');
   const callId = useMemo(() => crypto.randomUUID(), []);
+  const { isOfficerView } = useOfficerView();
 
   const handleNavigate = (id: string) => {
     if (id === 'wypadek') {
       setCurrentView('accident-form');
     }
   };
+
+  // Officer View - overrides normal view
+  if (isOfficerView) {
+    return (
+      <ZusLayout
+        title="Analiza wypadku (widok urzędnika)"
+        onNavigate={handleNavigate}
+        activeItem=""
+      >
+        <OfficerView />
+      </ZusLayout>
+    );
+  }
 
   if (currentView === 'accident-form') {
     return (
