@@ -1,16 +1,18 @@
 from datetime import date, datetime
 import os
+from io import BytesIO
 from pathlib import Path
+from typing import Tuple
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-def create_karta_wypadku(accident_description: str = "") -> str:
-    """Generates a 'Karta Wypadku' document with provided accident description.
+def create_karta_wypadku_document(accident_description: str = "") -> Document:
+    """Creates a 'Karta Wypadku' document in memory.
     Args:
         accident_description (str): Description of the accident to include in the document.
     Returns:
-        str: File path of the generated document.
+        Document: The generated document object.
     """
     doc = Document()
     
@@ -109,6 +111,37 @@ def create_karta_wypadku(accident_description: str = "") -> str:
     doc.add_paragraph('5. Załączniki:')
     doc.add_paragraph('1. .................................................................')
     doc.add_paragraph('2. .................................................................')
+    
+    return doc
+
+def create_karta_wypadku_bytes(accident_description: str = "") -> Tuple[bytes, str]:
+    """Generates a 'Karta Wypadku' document in memory and returns it as bytes.
+    Args:
+        accident_description (str): Description of the accident to include in the document.
+    Returns:
+        tuple[bytes, str]: A tuple containing the document bytes and the filename.
+    """
+    doc = create_karta_wypadku_document(accident_description)
+    
+    # Save to BytesIO instead of file
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    
+    # Generate filename
+    filename = f'Karta_Wypadku_{datetime.now().strftime("%Y%m%d_%H%M%S")}.docx'
+    
+    return buffer.getvalue(), filename
+
+def create_karta_wypadku(accident_description: str = "") -> str:
+    """Generates a 'Karta Wypadku' document with provided accident description.
+    DEPRECATED: This function saves to disk. Use create_karta_wypadku_bytes() instead.
+    Args:
+        accident_description (str): Description of the accident to include in the document.
+    Returns:
+        str: File path of the generated document.
+    """
+    doc = create_karta_wypadku_document(accident_description)
     
     # Create generated directory if it doesn't exist
     generated_dir = Path(__file__).parent / 'generated'

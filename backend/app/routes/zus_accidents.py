@@ -5,12 +5,12 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, HTTPException, status, Query
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.services.zus_accident_analyse import zus_accident_analyse
-from app.services.zus_card_generator import create_karta_wypadku
+from app.services.zus_card_generator import create_karta_wypadku, create_karta_wypadku_bytes
 from app.utils.validation import validate_mime_type, validate_attachment_size
 
 router = APIRouter(prefix="/api/zus-accidents", tags=["zus-accidents"])
@@ -139,15 +139,12 @@ async def analyse_accident(request: AnalyseRequest):
         # Map grade to code
         grade_code = map_grade_to_code(grade)
         
-        # Generate accident card if circumstances are available
+        # Note: card_file_path is kept for backward compatibility but will be None
+        # The frontend should use the generate-card endpoint instead
         card_file_path = None
         if circumstances:
-            try:
-                card_file_path = create_karta_wypadku(accident_description=circumstances)
-                logger.info(f"Generated accident card: {card_file_path}")
-            except Exception as card_error:
-                logger.error(f"Failed to generate accident card: {card_error}")
-                # Don't fail the whole request if card generation fails
+            # Just indicate that a card can be generated, but don't save it
+            card_file_path = "available"
         
         return AnalyseResponse(
             grade=grade,
@@ -170,10 +167,37 @@ async def analyse_accident(request: AnalyseRequest):
         )
 
 
+@router.get("/generate-card")
+async def generate_accident_card(accident_description: str = Query("", description="Description of the accident")):
+    """
+    Generate and download a 'Karta Wypadku' document on-demand.
+    The document is generated in memory and streamed directly to the client.
+    """
+    try:
+        # Generate document in memory
+        doc_bytes, filename = create_karta_wypadku_bytes(accident_description=accident_description)
+        
+        # Return as response with proper headers
+        return Response(
+            content=doc_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"'
+            }
+        )
+    except Exception as e:
+        logger.exception(f"Error generating accident card: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=format_error_response("Failed to generate accident card"),
+        )
+
+
 @router.get("/download-card/{filename}")
 async def download_accident_card(filename: str):
     """
-    Download a generated accident card by filename.
+    Download a previously generated accident card by filename.
+    DEPRECATED: Use /generate-card endpoint instead for on-demand generation.
     """
     # Sanitize filename to prevent directory traversal
     safe_filename = os.path.basename(filename)
@@ -189,6 +213,7 @@ async def download_accident_card(filename: str):
         )
     
     # Return file as download
+    from fastapi.responses import FileResponse
     return FileResponse(
         path=str(file_path),
         filename=safe_filename,

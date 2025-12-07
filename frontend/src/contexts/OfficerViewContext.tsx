@@ -8,7 +8,7 @@ interface OfficerViewContextType {
 const OfficerViewContext = createContext<OfficerViewContextType | undefined>(undefined);
 
 export const OfficerViewProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isOfficerView, setIsOfficerView] = useState(false);
+  const [isOfficerView, setIsOfficerView] = useState(true);
 
   const toggleOfficerView = () => {
     setIsOfficerView((prev) => !prev);

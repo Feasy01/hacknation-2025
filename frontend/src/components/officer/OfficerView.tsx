@@ -318,12 +318,16 @@ export const OfficerView: React.FC = () => {
             )}
 
             {/* Download accident card if available */}
-            {analysisResult.card_file_path && (
+            {analysisResult.card_file_path && analysisResult.circumstances && (
               <div className="mt-4">
                 <Button
-                  onClick={() => {
-                    const filename = analysisResult.card_file_path!.split('/').pop();
-                    window.open(`http://localhost:8000/api/zus-accidents/download-card/${filename}`, '_blank');
+                  onClick={async () => {
+                    try {
+                      await accidentAnalysisApi.downloadAccidentCard(analysisResult.circumstances || '');
+                    } catch (error: any) {
+                      console.error('Error downloading accident card:', error);
+                      alert('Nie udało się pobrać karty wypadku. Spróbuj ponownie.');
+                    }
                   }}
                   className="w-full"
                   variant="default"

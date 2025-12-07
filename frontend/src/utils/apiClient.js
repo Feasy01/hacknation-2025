@@ -274,4 +274,40 @@ export const accidentAnalysisApi = {
 
     return handleResponse(response);
   },
+
+  // Generate and download accident card
+  downloadAccidentCard: async (accidentDescription) => {
+    const params = new URLSearchParams();
+    if (accidentDescription) {
+      params.append('accident_description', accidentDescription);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/zus-accidents/generate-card?${params.toString()}`);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'An error occurred' }));
+      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    }
+
+    // Get the filename from Content-Disposition header or use a default
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'Karta_Wypadku.docx';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+?)"?$/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
+
+    // Get the blob and create download link
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
 };
