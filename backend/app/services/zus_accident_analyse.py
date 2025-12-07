@@ -1,10 +1,31 @@
 from dataclasses import dataclass
 import json
+import os
 from google import genai
 from google.genai import types
 import pathlib
+from dotenv import load_dotenv
+
+# Load environment variables from app/.env
+_env_path = pathlib.Path(__file__).parent.parent / '.env'
+load_dotenv(_env_path)
 
 # from card_generator import create_karta_wypadku
+
+# Global client singleton - kept in memory to prevent garbage collection
+_GENAI_CLIENT = None
+_CLIENT_REFS = []  # Keep strong reference to prevent GC
+
+def _get_client():
+    """Get or create singleton GenAI client."""
+    global _GENAI_CLIENT, _CLIENT_REFS
+    if _GENAI_CLIENT is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY environment variable is not set")
+        _GENAI_CLIENT = genai.Client(api_key=api_key)
+        _CLIENT_REFS.append(_GENAI_CLIENT)  # Prevent garbage collection
+    return _GENAI_CLIENT
 
 @dataclass
 class ZUSOpinion():
@@ -105,7 +126,8 @@ def zus_accident_analyse(source_files_bytes: list, mime_types: list = None) -> d
     Returns:
         JSON string with analysis results
     """
-    client = genai.Client()
+    # Use singleton client to prevent garbage collection issues
+    client = _get_client()
 
     config = types.GenerateContentConfig(
         system_instruction=system_instruction_text,
