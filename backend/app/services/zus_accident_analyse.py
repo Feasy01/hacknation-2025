@@ -70,7 +70,8 @@ Aby uznać zdarzenie za wypadek przy pracy, muszą wystąpić ŁĄCZNIE wszystki
    - Musi wystąpić podczas wykonywania zwykłych czynności związanych z prowadzeniem działalności.
    - Musi zachodzić związek przyczynowy, czasowy, miejscowy i funkcjonalny.
    - Powiązanie wypadku z wykonywaniem pracy zarobkowej musi być oczywiste i nie może opierać się na domysłach lub tłumaczeniu poszkodowanego. Zakładaj, że poszkodowany będzie kłamać lub kombinować w celu wyłudzenia świadczeń (np. opisując wypadek jako związany z pracą, gdy tak nie jest, bo robił coś dla siebie lub rodziny). Bądź bardzo krytyczny wobec podawanych okoliczności i jak coś nawet delikatnie wzbudza Twoje wątpliwości to daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy", nawet jak wszystkie 4 kryteria są spełnione, a poszkodowany próbuje to tłumaczyć.
-   - Jeśli nie było świadków zdarzenia to poszkodowany musi dostarczyć bardzo mocne dowody na związek z pracą (np. umowy świadczenia usług, dokumenty zlecenia, potwierdzenie umówienia wizyty u klienta, itp.). Brak świadków sam w sobie nie jest powodem do odrzucenia zgłoszenia, ale wymaga mocnych dowodów. W przypadku braku takich dowodów daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy".
+   - Jeśli wykonywana czynność nie jest zwykłą, regularną czynnością związaną z wykonywaną działalnością gospodarczą (np. czynności pomocnicze wykonywane nieregularnie), to poszkodowany musi dostarczyć bardzo mocne dowody na związek z pracą (np. umowy świadczenia usług, dokumenty zlecenia, potwierdzenie umówienia wizyty u klienta, fakturę VAT, itp.). W przypadku braku takich dowodów daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy". - Brak świadków sam w sobie nie jest powodem do odrzucenia zgłoszenia, ale wymaga to bardzo dokładnej analizy pozostałych dowodów.
+   - W przypadku, gdy zlecenie było wykonywane na rzecz rodziny lub znajomych, to związek z pracą musi być bardzo dobrze udokumentowany (np. faktury, umowy, potwierdzenia przelewów, itp.). W przeciwnym razie daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy".
 
 ZADANIA ANALITYCZNE:
 1. Sprawdź spójność danych (rozbieżności w datach, miejscach, opisach).
@@ -135,7 +136,7 @@ if __name__ == "__main__":
     # files are in "karty/karty/wypadek i/zawiadomienie o wypadku i.pdf" and karty/karty/wypadek i/wyjaśnienia poszkodowanego i.pdf" for i in range 1-50
 
     # for i in [23, 33, 37, 38, 39, 54, 55, 56, 76, 79, 100, 111]:
-    for i in range(57,75):
+    for i in [37, 38, 39, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65]:
         filepath = pathlib.Path(f'karty/karty/wypadek {i}/zawiadomienie o wypadku {i}.pdf')
         filepath2 = pathlib.Path(f'karty/karty/wypadek {i}/wyjaśnienia poszkodowanego {i}.pdf')
 
