@@ -16,6 +16,7 @@ interface AnalysisResult {
   circumstances?: string;
   anomalies?: string;
   raw?: any;
+  card_file_path?: string;
 }
 
 const ALLOWED_MIME_TYPES = [
@@ -158,11 +159,10 @@ export const OfficerView: React.FC = () => {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-              isDragging
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging
                 ? 'border-primary bg-primary/5'
                 : 'border-muted-foreground/25 hover:border-muted-foreground/50'
-            }`}
+              }`}
           >
             <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-sm text-muted-foreground mb-2">
@@ -197,11 +197,10 @@ export const OfficerView: React.FC = () => {
                 {files.map((fileWithError, index) => (
                   <div
                     key={index}
-                    className={`flex items-center justify-between p-3 rounded-md border ${
-                      fileWithError.error
+                    className={`flex items-center justify-between p-3 rounded-md border ${fileWithError.error
                         ? 'border-destructive bg-destructive/5'
                         : 'border-border bg-card'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <File className="w-5 h-5 text-muted-foreground flex-shrink-0" />
@@ -281,9 +280,8 @@ export const OfficerView: React.FC = () => {
               <h3 className="text-sm font-semibold mb-2">Ocena:</h3>
               <div className="flex items-center gap-3">
                 <div
-                  className={`px-4 py-2 rounded-md font-semibold ${
-                    getGradeDisplay(analysisResult.grade_code).bg
-                  } ${getGradeDisplay(analysisResult.grade_code).color}`}
+                  className={`px-4 py-2 rounded-md font-semibold ${getGradeDisplay(analysisResult.grade_code).bg
+                    } ${getGradeDisplay(analysisResult.grade_code).color}`}
                 >
                   {getGradeDisplay(analysisResult.grade_code).text}
                 </div>
@@ -319,15 +317,20 @@ export const OfficerView: React.FC = () => {
               </div>
             )}
 
-            {/* Note for positive result */}
-            {analysisResult.grade_code === 'yes' && (
-              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-blue-900">
-                    <strong>Uwaga:</strong> Utworzenie karty zdarzenia – do wdrożenia w kolejnych iteracjach.
-                  </p>
-                </div>
+            {/* Download accident card if available */}
+            {analysisResult.card_file_path && (
+              <div className="mt-4">
+                <Button
+                  onClick={() => {
+                    const filename = analysisResult.card_file_path!.split('/').pop();
+                    window.open(`http://localhost:8000/api/zus-accidents/download-card/${filename}`, '_blank');
+                  }}
+                  className="w-full"
+                  variant="default"
+                >
+                  <File className="w-4 h-4 mr-2" />
+                  Pobierz Kartę Wypadku
+                </Button>
               </div>
             )}
           </CardContent>

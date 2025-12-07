@@ -1,4 +1,6 @@
 from datetime import date, datetime
+import os
+from pathlib import Path
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -108,10 +110,19 @@ def create_karta_wypadku(accident_description: str = "") -> str:
     doc.add_paragraph('1. .................................................................')
     doc.add_paragraph('2. .................................................................')
     
-    file_path = f'generated/Karta_Wypadku_{datetime.now().strftime("%Y%m%d_%H%M%S")}.docx'
-    doc.save(file_path)
+    # Create generated directory if it doesn't exist
+    generated_dir = Path(__file__).parent / 'generated'
+    generated_dir.mkdir(exist_ok=True)
+    
+    # Generate filename and full path
+    filename = f'Karta_Wypadku_{datetime.now().strftime("%Y%m%d_%H%M%S")}.docx'
+    file_path = generated_dir / filename
+    
+    doc.save(str(file_path))
     print(f"Plik '{file_path}' został wygenerowany.")
-    return file_path
+    
+    # Return relative path for the API response
+    return f'generated/{filename}'
 
 if __name__ == "__main__":
     create_karta_wypadku()

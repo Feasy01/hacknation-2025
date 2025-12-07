@@ -1,9 +1,12 @@
 import base64
 import json
 import logging
+import os
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from app.services.zus_accident_analyse import zus_accident_analyse
@@ -32,6 +35,7 @@ class AnalyseResponse(BaseModel):
     circumstances: Optional[str] = None
     anomalies: Optional[str] = None
     raw: Optional[dict] = None
+    card_file_path: Optional[str] = None  # Path to generated accident card
 
 
 def format_error_response(message: str, field_errors: Optional[dict] = None) -> dict:
@@ -135,6 +139,16 @@ async def analyse_accident(request: AnalyseRequest):
         # Map grade to code
         grade_code = map_grade_to_code(grade)
         
+        # Generate accident card if circumstances are available
+        card_file_path = None
+        if circumstances:
+            try:
+                card_file_path = create_karta_wypadku(accident_description=circumstances)
+                logger.info(f"Generated accident card: {card_file_path}")
+            except Exception as card_error:
+                logger.error(f"Failed to generate accident card: {card_error}")
+                # Don't fail the whole request if card generation fails
+        
         return AnalyseResponse(
             grade=grade,
             grade_code=grade_code,
@@ -142,6 +156,7 @@ async def analyse_accident(request: AnalyseRequest):
             circumstances=circumstances,
             anomalies=anomalies,
             raw=raw_response,
+            card_file_path=card_file_path,
         )
         
     except HTTPException:
@@ -153,4 +168,30 @@ async def analyse_accident(request: AnalyseRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=format_error_response("An error occurred during analysis. Please try again."),
         )
+
+
+@router.get("/download-card/{filename}")
+async def download_accident_card(filename: str):
+    """
+    Download a generated accident card by filename.
+    """
+    # Sanitize filename to prevent directory traversal
+    safe_filename = os.path.basename(filename)
+    
+    # Build file path relative to services directory
+    file_path = Path(__file__).parent.parent / "services" / "generated" / safe_filename
+    
+    # Check if file exists
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=format_error_response("File not found"),
+        )
+    
+    # Return file as download
+    return FileResponse(
+        path=str(file_path),
+        filename=safe_filename,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
