@@ -201,7 +201,7 @@ export const chatApi = {
 // ElevenLabs integration helpers
 export const elevenLabsApi = {
   // Sync manual form edits into ElevenLabs conversation session
-  syncConversation: async (conversationId, formData) => {
+  syncConversation: async (conversationId, formData, analyse = false) => {
     const response = await fetch(
       `${API_BASE_URL}/api/elevenlabs/conversation/${conversationId}/sync`,
       {
@@ -209,8 +209,35 @@ export const elevenLabsApi = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ form_data: formData }),
+        body: JSON.stringify({ 
+          form_data: formData,
+          analyse: analyse  // NOWE - opcjonalna flaga
+        }),
       }
+    );
+
+    return handleResponse(response);
+  },
+
+  // NEW: Trigger form analysis
+  analyseConversation: async (conversationId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/elevenlabs/conversation/${conversationId}/analyse`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    return handleResponse(response);
+  },
+
+  // NEW: Get conversation snapshot (includes ai_notes)
+  getConversationSnapshot: async (conversationId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/elevenlabs/snapshot/${conversationId}`
     );
 
     return handleResponse(response);

@@ -13,6 +13,7 @@ interface FormFieldProps {
   required?: boolean;
   className?: string;
   disabled?: boolean;
+  hasError?: boolean;
 }
 
 export const FormField: React.FC<FormFieldProps> = ({
@@ -25,6 +26,7 @@ export const FormField: React.FC<FormFieldProps> = ({
   required = false,
   className,
   disabled = false,
+  hasError = false,
 }) => {
   return (
     <div className={cn('space-y-2', className)}>
@@ -40,7 +42,10 @@ export const FormField: React.FC<FormFieldProps> = ({
         onChange={(e) => onChange(name, e.target.value)}
         placeholder={placeholder}
         disabled={disabled}
-        className="w-full"
+        className={cn(
+          "w-full",
+          hasError && "border-destructive focus-visible:ring-destructive"
+        )}
       />
     </div>
   );

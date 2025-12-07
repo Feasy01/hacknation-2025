@@ -8,6 +8,109 @@ interface ElevenLabsWidgetProps {
   onError?: (error: Error) => void;
 }
 
+// Global function to trigger call - can be called from anywhere
+export const triggerElevenLabsCall = () => {
+  const findAndClickCallButton = (): boolean => {
+    // Try multiple selectors including shadow DOM
+    const selectors = [
+      'button[aria-label="Zadzwon do nas"]',
+      'button[aria-label*="Zadzwon"]',
+      'elevenlabs-convai button',
+      'elevenlabs-convai [role="button"]',
+    ];
+
+    for (const selector of selectors) {
+      const button = document.querySelector(selector) as HTMLElement;
+      if (button && button.offsetParent !== null) {
+        button.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          button.click();
+          // Also dispatch events
+          button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        }, 300);
+        return true;
+      }
+    }
+
+    // Try to access shadow DOM
+    const widgetElement = document.querySelector('elevenlabs-convai');
+    if (widgetElement && widgetElement.shadowRoot) {
+      const shadowButton = widgetElement.shadowRoot.querySelector('button[aria-label="Zadzwon do nas"]') as HTMLElement;
+      if (shadowButton) {
+        shadowButton.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          shadowButton.click();
+        }, 300);
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // First attempt
+  if (findAndClickCallButton()) {
+    return;
+  }
+
+  // Scroll to widget
+  const widgetElement = document.querySelector('elevenlabs-convai');
+  if (widgetElement) {
+    widgetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  // Use MutationObserver to wait for button
+  const observer = new MutationObserver(() => {
+    if (findAndClickCallButton()) {
+      observer.disconnect();
+    }
+  });
+
+  const targetNode = widgetElement || document.body;
+  observer.observe(targetNode, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['aria-label', 'class'],
+  });
+
+  // Also observe shadow DOM if available
+  if (widgetElement) {
+    const shadowObserver = new MutationObserver(() => {
+      if (findAndClickCallButton()) {
+        shadowObserver.disconnect();
+      }
+    });
+    
+    // Try to observe shadow root
+    const checkShadowRoot = () => {
+      if (widgetElement.shadowRoot) {
+        shadowObserver.observe(widgetElement.shadowRoot, {
+          childList: true,
+          subtree: true,
+        });
+      } else {
+        setTimeout(checkShadowRoot, 100);
+      }
+    };
+    checkShadowRoot();
+  }
+
+  // Retry with delays
+  const retryDelays = [500, 1000, 2000, 3000];
+  retryDelays.forEach((delay) => {
+    setTimeout(() => {
+      if (findAndClickCallButton()) {
+        observer.disconnect();
+      }
+    }, delay);
+  });
+
+  setTimeout(() => {
+    observer.disconnect();
+  }, 5000);
+};
+
 /**
  * ElevenLabs Conversational AI Widget Component
  * 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AccidentReportFormData, initialFormData, PersonData, Address, CorrespondenceAddress, Witness, AccidentDetails } from '@/types/accident-report';
+import { AccidentReportFormData, initialFormData, PersonData, Address, CorrespondenceAddress, Witness, AccidentDetails, AINote } from '@/types/accident-report';
 import { StepIndicator, FORM_STEPS } from './StepIndicator';
 import { Step1VictimData } from './steps/Step1VictimData';
 import { Step2Address } from './steps/Step2Address';
@@ -13,6 +13,7 @@ import { ConfirmationScreen } from './ConfirmationScreen';
 import { ModeSelector } from './ModeSelector';
 import { ChatForm } from './ChatForm';
 import { AcceptanceScreen } from './AcceptanceScreen';
+import { AnalysisProgressDialog } from './AnalysisProgressDialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { applicationsApi, elevenLabsApi } from '@/utils/apiClient';
@@ -33,6 +34,9 @@ export const AccidentReportForm: React.FC<AccidentReportFormProps> = ({ conversa
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedApplication, setSubmittedApplication] = useState<Application | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [aiNotes, setAiNotes] = useState<AINote[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
   const syncTimeoutRef = useRef<number | null>(null);
   const isSseUpdateRef = useRef(false);
 
@@ -162,6 +166,10 @@ export const AccidentReportForm: React.FC<AccidentReportFormProps> = ({ conversa
           const mapped = mapBackendFormToFrontend(payload.form_data);
           isSseUpdateRef.current = true;
           setFormData(mapped);
+          
+          // Update ai_notes from SSE - always update to handle clearing
+          // If ai_notes is not present or is empty array, clear the notes
+          setAiNotes(payload.ai_notes || []);
         }
       } catch (error) {
         console.error('Error parsing ElevenLabs SSE payload', error);
@@ -176,18 +184,42 @@ export const AccidentReportForm: React.FC<AccidentReportFormProps> = ({ conversa
   }, [conversationId]);
 
   const syncElevenLabsForm = useCallback(
-    async (data: AccidentReportFormData) => {
+    async (data: AccidentReportFormData, triggerAnalysis = false) => {
       if (!conversationId) return;
 
       try {
         const backendPayload = mapFrontendFormToBackend(data);
-        await elevenLabsApi.syncConversation(conversationId, backendPayload);
+        await elevenLabsApi.syncConversation(conversationId, backendPayload, triggerAnalysis);
       } catch (error) {
         console.error('Error syncing manual form data to ElevenLabs session', error);
       }
     },
     [conversationId]
   );
+
+  const triggerAnalysis = useCallback(async () => {
+    if (!conversationId) return;
+    
+    setIsAnalyzing(true);
+    setAnalysisError(null);
+    
+    try {
+      await elevenLabsApi.analyseConversation(conversationId);
+      // ai_notes zostaną zaktualizowane przez SSE
+    } catch (error: any) {
+      console.error('Error triggering analysis:', error);
+      setAnalysisError(error.message || 'Błąd podczas analizy formularza');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [conversationId]);
+
+  // Automatyczna analiza przy wejściu na podsumowanie
+  useEffect(() => {
+    if (currentStep === 8 && conversationId) {
+      triggerAnalysis();
+    }
+  }, [currentStep, conversationId, triggerAnalysis]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -235,7 +267,7 @@ export const AccidentReportForm: React.FC<AccidentReportFormProps> = ({ conversa
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <Step1VictimData data={formData.poszkodowany} onChange={updatePoszkodowany} />;
+        return <Step1VictimData data={formData.poszkodowany} onChange={updatePoszkodowany} aiNotes={aiNotes} />;
       case 2:
         return (
           <Step2Address
@@ -273,13 +305,25 @@ export const AccidentReportForm: React.FC<AccidentReportFormProps> = ({ conversa
           />
         );
       case 5:
-        return <Step5AccidentDetails data={formData.szczegoly} onChange={updateSzczegoly} />;
+        return <Step5AccidentDetails data={formData.szczegoly} onChange={updateSzczegoly} aiNotes={aiNotes} />;
       case 6:
         return <Step6Machinery data={formData.szczegoly} onChange={updateSzczegoly} />;
       case 7:
-        return <Step7Witnesses witnesses={formData.swiadkowie} onChange={updateSwiadkowie} />;
+        return <Step7Witnesses witnesses={formData.swiadkowie} onChange={updateSwiadkowie} aiNotes={aiNotes} />;
       case 8:
-        return <Step8Summary data={formData} onSubmit={handleSubmit} isSubmitting={isSubmitting} error={submitError} onStepClick={goToStep} />;
+        return (
+          <Step8Summary 
+            data={formData} 
+            onSubmit={handleSubmit} 
+            isSubmitting={isSubmitting} 
+            error={submitError}
+            onStepClick={goToStep}
+            aiNotes={aiNotes}
+            isAnalyzing={isAnalyzing}
+            analysisError={analysisError}
+            onRetryAnalysis={triggerAnalysis}
+          />
+        );
       default:
         return null;
     }
@@ -290,7 +334,14 @@ export const AccidentReportForm: React.FC<AccidentReportFormProps> = ({ conversa
 
   return (
     <div className="flex justify-center py-6">
-      <div className="w-full max-w-3xl">
+      <div className="w-full max-w-3xl relative">
+        {/* Loading overlay - positioned relative to form column */}
+        <AnalysisProgressDialog 
+          open={isAnalyzing} 
+          onOpenChange={() => {}} 
+          variant="overlay"
+        />
+        
         <div className="space-y-6">
           {/* Main card with header and step indicator */}
           <div className="bg-card border border-border rounded-lg overflow-hidden shadow-sm">

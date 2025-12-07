@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AccidentReportFormData } from '@/types/accident-report';
 import { Application } from '@/types/api';
-import { CheckCircle, FileDown, Send, ArrowLeft, Clock, FileText, User, Calendar, Home } from 'lucide-react';
+import { CheckCircle, FileDown, Send, ArrowLeft, Clock, FileText, User, Calendar, Home, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { fillPdfForm, downloadPdf } from '@/utils/pdfFiller';
 
 interface ConfirmationScreenProps {
   data: AccidentReportFormData;
@@ -14,6 +15,8 @@ interface ConfirmationScreenProps {
 
 export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ data, application, onBack }) => {
   const navigate = useNavigate();
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   
   const referenceNumber = application?.id 
     ? `ZG/${new Date(application.created_at).getFullYear()}/${application.id.substring(0, 8).toUpperCase()}`
@@ -34,6 +37,30 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ data, ap
         hour: '2-digit',
         minute: '2-digit',
       });
+
+  const handleDownloadPdf = async () => {
+    setIsDownloadingPdf(true);
+    setPdfError(null);
+    
+    try {
+      // Path to the PDF template in public folder
+      const pdfTemplatePath = '/EWYP_wypelnij_i_wydrukuj.pdf';
+      
+      // Fill the PDF with form data
+      const filledPdf = await fillPdfForm(pdfTemplatePath, data);
+      
+      // Generate filename with reference number
+      const filename = `zawiadomienie_wypadek_${referenceNumber.replace(/\//g, '_')}.pdf`;
+      
+      // Download the PDF
+      downloadPdf(filledPdf, filename);
+    } catch (error: any) {
+      console.error('Error downloading PDF:', error);
+      setPdfError(error.message || 'Nie udało się pobrać pliku PDF. Spróbuj ponownie.');
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
@@ -175,14 +202,23 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ data, ap
                   variant="ghost"
                   size="lg"
                   className="w-full h-auto py-6 flex-col gap-3 hover:bg-muted/50"
-                  disabled
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloadingPdf}
                 >
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FileDown className="w-6 h-6 text-primary" />
+                    {isDownloadingPdf ? (
+                      <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                    ) : (
+                      <FileDown className="w-6 h-6 text-primary" />
+                    )}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="font-semibold text-foreground">Pobierz/drukuj PDF</span>
-                    <span className="text-xs text-muted-foreground font-normal">Wkrótce dostępne</span>
+                    <span className="font-semibold text-foreground">
+                      {isDownloadingPdf ? 'Przygotowywanie PDF...' : 'Pobierz/drukuj PDF'}
+                    </span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {isDownloadingPdf ? 'Proszę czekać' : 'Pobierz wypełniony formularz'}
+                    </span>
                   </div>
                 </Button>
               </CardContent>
@@ -208,9 +244,16 @@ export const ConfirmationScreen: React.FC<ConfirmationScreenProps> = ({ data, ap
             </Card>
           </div>
 
+          {pdfError && (
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+              <p className="text-xs text-destructive text-center">
+                {pdfError}
+              </p>
+            </div>
+          )}
           <div className="bg-muted/50 border border-border rounded-lg p-4">
             <p className="text-xs text-muted-foreground text-center">
-              Funkcje pobierania PDF oraz wysyłki elektronicznej będą dostępne wkrótce.
+              Funkcja wysyłki elektronicznej będzie dostępna wkrótce.
             </p>
           </div>
         </div>

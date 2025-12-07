@@ -139,3 +139,26 @@ export const initialFormData: AccidentReportFormData = {
   },
   swiadkowie: [],
 };
+
+// AI Notes types
+export type AINoteSeverity = 'warning' | 'critical';
+export type AINoteReason = 'missing' | 'insufficient' | 'inconsistent';
+
+export interface AINote {
+  section: string;  // np. 'szczegoly', 'poszkodowany', 'swiadkowie'
+  message: string;  // Wiadomość po polsku, formalnym tonem
+  severity: AINoteSeverity;
+  fields: string[];  // Lista ścieżek w dot-notation, np. ['szczegoly.opis_okolicznosci']
+  reason: AINoteReason;
+  suggested_action?: string;  // Opcjonalna sugestia działania
+}
+
+// Rozszerz interfejs dla SSE payload
+export interface FormUpdatePayload {
+  type: 'form_update';
+  conversation_id: string;
+  form_data: AccidentReportFormData;
+  validation_errors: Record<string, string>;
+  ai_notes: AINote[];  // NOWE
+  timestamp: string;
+}

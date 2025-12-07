@@ -15,6 +15,7 @@ from app.services.form_state import (
     get_initial_form_data,
     validate_form_data,
 )
+from app.services.form_analysis import analyze_form_data
 from app.models.schemas import AccidentReportFormData
 
 router = APIRouter(prefix="/api/elevenlabs", tags=["elevenlabs"])
@@ -68,6 +69,7 @@ class ElevenLabsWebhookPayload(BaseModel):
 class ManualSyncPayload(BaseModel):
     """Payload model for manual form state syncs from the UI."""
     form_data: AccidentReportFormData
+    analyse: Optional[bool] = False  # If True, trigger analysis after sync
 
 
 def build_form_state_message(conversation_id: str, session: dict) -> dict:
@@ -78,6 +80,7 @@ def build_form_state_message(conversation_id: str, session: dict) -> dict:
         "conversation_id": conversation_id,
         "form_data": form_data.model_dump(),
         "validation_errors": session.get("validation_errors", {}),
+        "ai_notes": session.get("ai_notes", []),
         "timestamp": datetime.now().isoformat(),
     }
 
@@ -152,6 +155,13 @@ async def elevenlabs_webhook(request: Request):
                     validation = validate_form_data(form_data)
                     session["validation_errors"] = validation
                     
+                    # Remove AI notes when form is updated by LLM via webhook
+                    # This ensures old notes don't persist after form changes
+                    if "ai_notes" in session:
+                        session.pop("ai_notes")
+                    if "analysis_updated_at" in session:
+                        session.pop("analysis_updated_at")
+                    
             except Exception as e:
                 print(f"[ElevenLabs Webhook] Error applying form updates: {e}")
                 # Continue processing even if form update fails
@@ -198,6 +208,8 @@ async def sync_conversation_state(conversation_id: str, payload: ManualSyncPaylo
     
     This keeps ElevenLabs sessions in sync so the agent can read the latest
     answers via GET /api/elevenlabs/conversation/{conversation_id}.
+    
+    If analyse=True, triggers form analysis after sync.
     """
     session = ensure_session(conversation_id)
 
@@ -205,6 +217,16 @@ async def sync_conversation_state(conversation_id: str, payload: ManualSyncPaylo
     session["last_updated"] = datetime.now()
     validation = validate_form_data(payload.form_data)
     session["validation_errors"] = validation
+
+    # Optionally trigger analysis
+    if payload.analyse:
+        ai_notes = analyze_form_data(payload.form_data, validation)
+        session["ai_notes"] = ai_notes
+        session["analysis_updated_at"] = datetime.now()
+    else:
+        # Keep existing ai_notes if not re-analyzing
+        if "ai_notes" not in session:
+            session["ai_notes"] = []
 
     await sse_manager.publish(
         conversation_id,
@@ -221,6 +243,7 @@ async def sync_conversation_state(conversation_id: str, payload: ManualSyncPaylo
                 field_value not in (None, "", [])
                 for field_value in payload.form_data.model_dump().values()
             ),
+            "ai_notes": session.get("ai_notes", []) if payload.analyse else None,
         },
     }
 
@@ -252,6 +275,46 @@ async def stream_conversation(conversation_id: str, request: Request):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
+@router.post("/conversation/{conversation_id}/analyse")
+async def analyse_conversation(conversation_id: str):
+    """
+    Analyze form data completeness, consistency, and quality.
+    Generates AI notes (warnings/suggestions) and stores them in session.
+    
+    This endpoint is called when user enters the summary step of the wizard.
+    Analysis can be repeated on each return to the summary step.
+    """
+    if conversation_id not in elevenlabs_sessions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found",
+        )
+    
+    session = elevenlabs_sessions[conversation_id]
+    form_data: AccidentReportFormData = session["form_data"]
+    validation_errors = session.get("validation_errors", {})
+    
+    # Perform analysis
+    ai_notes = analyze_form_data(form_data, validation_errors)
+    
+    # Store in session (overwriting previous result)
+    session["ai_notes"] = ai_notes
+    session["analysis_updated_at"] = datetime.now()
+    
+    # Notify listeners via SSE
+    await sse_manager.publish(
+        conversation_id,
+        build_form_state_message(conversation_id, session),
+    )
+    
+    return {
+        "success": True,
+        "conversation_id": conversation_id,
+        "ai_notes": ai_notes,
+        "analysis_updated_at": session["analysis_updated_at"].isoformat(),
+    }
+
+
 @router.get("/snapshot/{conversation_id}")
 async def get_conversation(conversation_id: str):
     """Get conversation data and form state for a given conversation ID."""
@@ -269,8 +332,10 @@ async def get_conversation(conversation_id: str):
         "conversation_id": conversation_id,
         "form_data": form_data,
         "validation_errors": validation,
+        "ai_notes": session.get("ai_notes", []),
         "created_at": session.get("created_at"),
         "last_updated": session.get("last_updated"),
+        "analysis_updated_at": session.get("analysis_updated_at"),
     }
 
 

@@ -1,15 +1,17 @@
 import React from 'react';
 import { FormField } from '@/components/forms/FormField';
-import { Witness } from '@/types/accident-report';
+import { Witness, AINote } from '@/types/accident-report';
 import { Users, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { hasFieldError } from '@/utils/fieldMapping';
 
 interface Step7Props {
   witnesses: Witness[];
   onChange: (witnesses: Witness[]) => void;
+  aiNotes?: AINote[];
 }
 
-export const Step7Witnesses: React.FC<Step7Props> = ({ witnesses, onChange }) => {
+export const Step7Witnesses: React.FC<Step7Props> = ({ witnesses, onChange, aiNotes = [] }) => {
   const addWitness = () => {
     const newWitness: Witness = {
       id: crypto.randomUUID(),
@@ -95,6 +97,7 @@ export const Step7Witnesses: React.FC<Step7Props> = ({ witnesses, onChange }) =>
                     value={witness.imie}
                     onChange={(_, value) => updateWitness(witness.id, 'imie', value)}
                     placeholder="np. Jan"
+                    hasError={hasFieldError('imie', aiNotes, 'swiadkowie')}
                   />
                   <FormField
                     label="Nazwisko"
@@ -102,6 +105,7 @@ export const Step7Witnesses: React.FC<Step7Props> = ({ witnesses, onChange }) =>
                     value={witness.nazwisko}
                     onChange={(_, value) => updateWitness(witness.id, 'nazwisko', value)}
                     placeholder="np. Kowalski"
+                    hasError={hasFieldError('nazwisko', aiNotes, 'swiadkowie')}
                   />
                 </div>
 
