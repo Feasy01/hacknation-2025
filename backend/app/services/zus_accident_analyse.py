@@ -4,6 +4,8 @@ from google import genai
 from google.genai import types
 import pathlib
 
+# from card_generator import create_karta_wypadku
+
 @dataclass
 class ZUSOpinion():
     grade: str
@@ -16,12 +18,12 @@ response_schema = types.Schema(
     properties={
         "grade": types.Schema(
             type=types.Type.STRING,
-            description="Ocena, czy zdarzenie jest wypadkiem przy pracy",
+            description="Ocena, czy zdarzenie jest wypadkiem przy pracy czy nie.",
             enum=[
                 "Tak, jest to wypadek przy pracy",
                 "Nie, nie jest to wypadek przy pracy",
-                "Nie mam wystarczających informacji, aby ocenić, czy jest to wypadek przy pracy",
-                "Nie mam 100% pewności, przypadek jest wątpliwy"
+                "Brakuje dokumentów lub informacji, aby podjąć decyzję",
+                "Wymaga dodatkowej analizy"
             ]
         ),
         "justification": types.Schema(
@@ -69,9 +71,9 @@ Aby uznać zdarzenie za wypadek przy pracy, muszą wystąpić ŁĄCZNIE wszystki
    - Zdarzenie musi nastąpić w okresie ubezpieczenia wypadkowego (zakładamy, że tak jest, chyba że w zgłoszeniu podano inaczej).
    - Musi wystąpić podczas wykonywania zwykłych czynności związanych z prowadzeniem działalności.
    - Musi zachodzić związek przyczynowy, czasowy, miejscowy i funkcjonalny.
-   - Powiązanie wypadku z wykonywaniem pracy zarobkowej musi być oczywiste i nie może opierać się na domysłach lub tłumaczeniu poszkodowanego. Zakładaj, że poszkodowany będzie kłamać lub kombinować w celu wyłudzenia świadczeń (np. opisując wypadek jako związany z pracą, gdy tak nie jest, bo robił coś dla siebie lub rodziny). Bądź bardzo krytyczny wobec podawanych okoliczności i jak coś nawet delikatnie wzbudza Twoje wątpliwości to daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy", nawet jak wszystkie 4 kryteria są spełnione, a poszkodowany próbuje to tłumaczyć.
-   - Jeśli wykonywana czynność nie jest zwykłą, regularną czynnością związaną z wykonywaną działalnością gospodarczą (np. czynności pomocnicze wykonywane nieregularnie), to poszkodowany musi dostarczyć bardzo mocne dowody na związek z pracą (np. umowy świadczenia usług, dokumenty zlecenia, potwierdzenie umówienia wizyty u klienta, fakturę VAT, itp.). W przypadku braku takich dowodów daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy". - Brak świadków sam w sobie nie jest powodem do odrzucenia zgłoszenia, ale wymaga to bardzo dokładnej analizy pozostałych dowodów.
-   - W przypadku, gdy zlecenie było wykonywane na rzecz rodziny lub znajomych, to związek z pracą musi być bardzo dobrze udokumentowany (np. faktury, umowy, potwierdzenia przelewów, itp.). W przeciwnym razie daj ocenę "Nie mam 100% pewności, przypadek jest wątpliwy".
+   - Powiązanie wypadku z wykonywaniem pracy zarobkowej musi być oczywiste i nie może opierać się na domysłach lub tłumaczeniu poszkodowanego. Zakładaj, że poszkodowany będzie kłamać lub kombinować w celu wyłudzenia świadczeń (np. opisując wypadek jako związany z pracą, gdy tak nie jest, bo robił coś dla siebie lub rodziny). Bądź bardzo krytyczny wobec podawanych okoliczności i jak coś nawet delikatnie wzbudza Twoje wątpliwości to daj ocenę "Wymaga dodatkowej analizy", nawet jak wszystkie 4 kryteria są spełnione, a poszkodowany próbuje to tłumaczyć.
+   - Jeśli wykonywana czynność nie jest zwykłą, regularną czynnością związaną z wykonywaną działalnością gospodarczą (np. czynności pomocnicze, czynności nieregularne), to poszkodowany musi dostarczyć bardzo mocne dowody na związek z pracą (np. umowy świadczenia usług, dokumenty zlecenia, potwierdzenie umówienia wizyty u klienta, fakturę VAT, itp.). W przypadku braku takich dowodów daj ocenę "Wymaga dodatkowej analizy". - Brak świadków sam w sobie nie jest powodem do odrzucenia zgłoszenia, ale wymaga to bardzo dokładnej analizy pozostałych dowodów.
+   - W przypadku, gdy zlecenie było wykonywane na rzecz rodziny, znajomych lub własnych celów/przedmiotów, to związek z pracą musi być bardzo dobrze udokumentowany (np. faktury, umowy, potwierdzenia przelewów, itp.). W przeciwnym razie daj ocenę "Nie, nie jest to wypadek przy pracy".
 
 ZADANIA ANALITYCZNE:
 1. Sprawdź spójność danych (rozbieżności w datach, miejscach, opisach).
@@ -85,7 +87,7 @@ WAŻNE WSKAZÓWKI:
 - Analiza musi być obiektywna i pozbawiona emocji.
 - Jeśli nie jesteś w 100 % pewien, że zdarzenie spełnia wszystkie kryteria, wskaż to wyraźnie w opinii.
 - Dane osobowe mają być pominięte (są celowo wymazywane).
-- Przy odpowiedziach "tak" i "nie" przekreślenie słowa "tak" lub "nie" za pomocą "X" oznacza odrzucenie tej opcji. W przypadku pytania "tak" i "nie" z kwadratami [] obok, zaznaczenie kwadratu "X" oznacza wybór tej opcji.
+- Przy odpowiedziach "tak" i "nie" przekreślenie słowa "tak" lub "nie" za pomocą "X" oznacza odrzucenie tej opcji. W przypadku pytania "tak" i "nie" z kwadratami [] obok, zaznaczenie kwadratu "X" oznacza wybór tej opcji. Zwróć uwagę, że opcja może być przekreślona linią (odrzucona), przekreśloną "X" (odrzucona) lub podkreślona (wybrana).
 - W przypadku, gdy z opisu zdarzenia wynika, że byli obecni świadkowie, ale ich dane nie są podane (celowe wymazanie danych osobowych), należy uznać, że dane świadków zostały poprawnie podane i świadkowie istnieli. Nie powinno mieć to wpływu na ocenę zdarzenia, ale w "anomalies" należy zaznaczyć "założono istnienie świadków, ale ich dane osobowe zostały usunięte."
 
 """
@@ -144,7 +146,7 @@ if __name__ == "__main__":
     # files are in "karty/karty/wypadek i/zawiadomienie o wypadku i.pdf" and karty/karty/wypadek i/wyjaśnienia poszkodowanego i.pdf" for i in range 1-50
 
     # for i in [23, 33, 37, 38, 39, 54, 55, 56, 76, 79, 100, 111]:
-    for i in [37, 38, 39, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65]:
+    for i in [37, 38, 39, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 101, 102, 103, 104, 105]:
         filepath = pathlib.Path(f'karty/karty/wypadek {i}/zawiadomienie o wypadku {i}.pdf')
         filepath2 = pathlib.Path(f'karty/karty/wypadek {i}/wyjaśnienia poszkodowanego {i}.pdf')
 
@@ -160,6 +162,11 @@ if __name__ == "__main__":
           grade = resp_dict.get('grade', 'Brak oceny')
 
           print(f'Case {i}: {grade}')
+
+          if i == 37:
+              accident_description = resp_dict.get('circumstances', '')
+              create_karta_wypadku(accident_description=accident_description)
+
         except Exception as e:
           print(f'Case {i} failed with error: {e}')
 

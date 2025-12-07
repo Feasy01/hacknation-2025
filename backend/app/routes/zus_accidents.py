@@ -48,9 +48,9 @@ def map_grade_to_code(grade: str) -> str:
         return "yes"
     elif "nie, nie jest to wypadek" in grade_lower or ("nie" in grade_lower and "wątpliwy" not in grade_lower):
         return "no"
-    elif "nie mam wystarczających informacji" in grade_lower or "insufficient" in grade_lower:
+    elif "brakuje dokumentów lub informacji" in grade_lower or "insufficient" in grade_lower:
         return "insufficient"
-    elif "wątpliwy" in grade_lower or "nie mam 100% pewności" in grade_lower:
+    elif "wątpliwy" in grade_lower or "wymaga dodatkowej analizy" in grade_lower:
         return "uncertain"
     else:
         # Default to uncertain if unclear
