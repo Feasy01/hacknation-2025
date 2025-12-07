@@ -4,6 +4,12 @@ from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 def create_karta_wypadku(accident_description: str = "") -> str:
+    """Generates a 'Karta Wypadku' document with provided accident description.
+    Args:
+        accident_description (str): Description of the accident to include in the document.
+    Returns:
+        str: File path of the generated document.
+    """
     doc = Document()
     
     # Styl czcionki

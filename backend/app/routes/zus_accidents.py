@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from app.services.zus_accident_analyse import zus_accident_analyse
+from app.services.zus_card_generator import create_karta_wypadku
 from app.utils.validation import validate_mime_type, validate_attachment_size
 
 router = APIRouter(prefix="/api/zus-accidents", tags=["zus-accidents"])

@@ -10,8 +10,6 @@ from dotenv import load_dotenv
 _env_path = pathlib.Path(__file__).parent.parent / '.env'
 load_dotenv(_env_path)
 
-# from card_generator import create_karta_wypadku
-
 # Global client singleton - kept in memory to prevent garbage collection
 _GENAI_CLIENT = None
 _CLIENT_REFS = []  # Keep strong reference to prevent GC
@@ -161,6 +159,7 @@ def zus_accident_analyse(source_files_bytes: list, mime_types: list = None) -> d
 
 if __name__ == "__main__":
     from dotenv import load_dotenv
+    from zus_card_generator import create_karta_wypadku
     load_dotenv()
 
     LOG_FILEPATH = pathlib.Path('zus_accident_analyse_log.txt')
