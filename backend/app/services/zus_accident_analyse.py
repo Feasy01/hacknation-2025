@@ -30,7 +30,7 @@ response_schema = types.Schema(
         ),
         "circumstances": types.Schema(
             type=types.Type.STRING,
-            description="Okoliczności zdarzenia, jeśli był to wypadek przy pracy",
+            description="Zwięzły opis okoliczności zdarzenia",
         ),
         "anomalies": types.Schema(
             type=types.Type.STRING,
@@ -39,7 +39,8 @@ response_schema = types.Schema(
     },
     required=[
         "grade",
-        "justification"
+        "justification",
+        "circumstances"
     ]
 )
 
@@ -83,7 +84,8 @@ WAŻNE WSKAZÓWKI:
 - Analiza musi być obiektywna i pozbawiona emocji.
 - Jeśli nie jesteś w 100 % pewien, że zdarzenie spełnia wszystkie kryteria, wskaż to wyraźnie w opinii.
 - Dane osobowe mają być pominięte (są celowo wymazywane).
-
+- Przy odpowiedziach "tak" i "nie" przekreślenie słowa "tak" lub "nie" za pomocą "X" oznacza odrzucenie tej opcji. W przypadku pytania "tak" i "nie" z kwadratami [] obok, zaznaczenie kwadratu "X" oznacza wybór tej opcji.
+- W przypadku, gdy z opisu zdarzenia wynika, że byli obecni świadkowie, ale ich dane nie są podane (celowe wymazanie danych osobowych), należy uznać, że dane świadków zostały poprawnie podane i świadkowie istnieli. Nie powinno mieć to wpływu na ocenę zdarzenia, ale w "anomalies" należy zaznaczyć "założono istnienie świadków, ale ich dane osobowe zostały usunięte."
 
 """
 
@@ -94,7 +96,7 @@ def zus_accident_analyse(source_files_bytes: list) -> dict:
 
     config = types.GenerateContentConfig(
         system_instruction=system_instruction_text,
-        temperature=0.5,
+        temperature=0.1,
         response_mime_type="application/json",
       response_schema=response_schema
     )
@@ -128,7 +130,31 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
 
-    filepath = pathlib.Path('pw3.pdf')
-    filepath2 = pathlib.Path('pz3.pdf')
+    LOG_FILEPATH = pathlib.Path('zus_accident_analyse_log.txt')
 
-    zus_accident_analyse([filepath.read_bytes(), filepath2.read_bytes()])
+    # files are in "karty/karty/wypadek i/zawiadomienie o wypadku i.pdf" and karty/karty/wypadek i/wyjaśnienia poszkodowanego i.pdf" for i in range 1-50
+
+    # for i in [23, 33, 37, 38, 39, 54, 55, 56, 76, 79, 100, 111]:
+    for i in range(57,75):
+        filepath = pathlib.Path(f'karty/karty/wypadek {i}/zawiadomienie o wypadku {i}.pdf')
+        filepath2 = pathlib.Path(f'karty/karty/wypadek {i}/wyjaśnienia poszkodowanego {i}.pdf')
+
+        try:
+            
+          resp = zus_accident_analyse([filepath.read_bytes(), filepath2.read_bytes()])
+          resp_dict = json.loads(resp)
+          with LOG_FILEPATH.open('a', encoding='utf-8') as f:
+              f.write(f'=== WYPADEK {i} ===\n')
+              f.write(json.dumps(resp_dict, ensure_ascii=False, indent=2))
+              f.write('\n\n')
+
+          grade = resp_dict.get('grade', 'Brak oceny')
+
+          print(f'Case {i}: {grade}')
+        except Exception as e:
+          print(f'Case {i} failed with error: {e}')
+
+    # filepath = pathlib.Path('pw3.pdf')
+    # filepath2 = pathlib.Path('pz3.pdf')
+
+    # zus_accident_analyse([filepath.read_bytes(), filepath2.read_bytes()])
