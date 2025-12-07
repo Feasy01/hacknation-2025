@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { PDFDocument } from 'pdf-lib';
 import { AccidentReportFormData } from '@/types/accident-report';
 
 /**
@@ -15,7 +15,7 @@ const createFieldMapping = (data: AccidentReportFormData): Record<string, string
     mapping['topmostSubform[0].Page1[0].PESEL[0]'] = data.poszkodowany.pesel || '';
     mapping['topmostSubform[0].Page1[0].Imię[0]'] = data.poszkodowany.imie || '';
     mapping['topmostSubform[0].Page1[0].Nazwisko[0]'] = data.poszkodowany.nazwisko || '';
-    mapping['topmostSubform[0].Page1[0].Dataurodzenia[0]'] = formatDate(data.poszkodowany.dataUrodzenia) || '';
+    mapping['topmostSubform[0].Page1[0].Dataurodzenia[0]'] = formatDate(data.poszkodowany.dataUrodzenia, true) || '';
     mapping['topmostSubform[0].Page1[0].Miejsceurodzenia[0]'] = data.poszkodowany.miejsceUrodzenia || '';
     mapping['topmostSubform[0].Page1[0].Numertelefonu[0]'] = data.poszkodowany.telefon || '';
     
@@ -110,7 +110,7 @@ const createFieldMapping = (data: AccidentReportFormData): Record<string, string
   if (data.szczegoly) {
     const szczegoly = data.szczegoly;
     
-    mapping['topmostSubform[0].Page3[0].Datawyp[0]'] = formatDate(szczegoly.data) || '';
+    mapping['topmostSubform[0].Page3[0].Datawyp[0]'] = formatDate(szczegoly.data, true) || '';
     mapping['topmostSubform[0].Page3[0].Godzina[0]'] = szczegoly.godzina || '';
     mapping['topmostSubform[0].Page3[0].Miejscewyp[0]'] = szczegoly.miejsce || '';
     mapping['topmostSubform[0].Page3[0].Godzina3A[0]'] = szczegoly.godzinaRozpoczeciaPracy || '';
@@ -154,7 +154,7 @@ const createFieldMapping = (data: AccidentReportFormData): Record<string, string
       }
     }
     
-    mapping['topmostSubform[0].Page3[0].Dataurodzenia[0]'] = formatDate(data.poszkodowany?.dataUrodzenia) || '';
+    mapping['topmostSubform[0].Page3[0].Dataurodzenia[0]'] = formatDate(data.poszkodowany?.dataUrodzenia, true) || '';
     mapping['topmostSubform[0].Page3[0].Nazwapaństwa3[0]'] = data.adresZamieszkania?.panstwo || 'Polska';
     mapping['topmostSubform[0].Page3[0].Nazwapaństwa2[0]'] = data.adresDzialalnosci?.panstwo || 'Polska';
   }
@@ -261,9 +261,26 @@ const createFieldMapping = (data: AccidentReportFormData): Record<string, string
 };
 
 /**
- * Formats date from YYYY-MM-DD to DD.MM.YYYY
+ * Replaces Polish characters with ASCII equivalents to avoid encoding issues
+ * @param text - Text that may contain Polish characters
+ * @returns Text with Polish characters replaced by ASCII equivalents
  */
-function formatDate(dateString: string | undefined): string {
+function replacePolishCharacters(text: string): string {
+  return text
+    .replace(/ą/g, 'a').replace(/ć/g, 'c').replace(/ę/g, 'e')
+    .replace(/ł/g, 'l').replace(/ń/g, 'n').replace(/ó/g, 'o')
+    .replace(/ś/g, 's').replace(/ź/g, 'z').replace(/ż/g, 'z')
+    .replace(/Ą/g, 'A').replace(/Ć/g, 'C').replace(/Ę/g, 'E')
+    .replace(/Ł/g, 'L').replace(/Ń/g, 'N').replace(/Ó/g, 'O')
+    .replace(/Ś/g, 'S').replace(/Ź/g, 'Z').replace(/Ż/g, 'Z');
+}
+
+/**
+ * Formats date from YYYY-MM-DD to DD.MM.YYYY or DD.MM.YY
+ * @param dateString - Date string in YYYY-MM-DD format
+ * @param shortYear - If true, uses 2-digit year (DD.MM.YY), otherwise 4-digit (DD.MM.YYYY)
+ */
+function formatDate(dateString: string | undefined, shortYear: boolean = false): string {
   if (!dateString) return '';
   
   try {
@@ -273,6 +290,11 @@ function formatDate(dateString: string | undefined): string {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
+    
+    if (shortYear) {
+      const yearShort = String(year).slice(-2);
+      return `${day}.${month}.${yearShort}`;
+    }
     
     return `${day}.${month}.${year}`;
   } catch {
@@ -296,9 +318,8 @@ export async function fillPdfForm(
     // Get the form
     const form = pdfDoc.getForm();
     
-    // Optional: embed a font and update appearances for better rendering
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    form.updateFieldAppearances(font);
+    // Note: We replace Polish characters with ASCII equivalents to avoid encoding issues
+    // This ensures compatibility with PDF fonts that don't support Unicode
     
     // Create mapping from form data (returns exact PDF field names)
     const fieldMapping = createFieldMapping(formData);
@@ -328,7 +349,29 @@ export async function fillPdfForm(
         // Handle different field types (including variants like PDFTextField2, PDFCheckBox2)
         if (fieldType.startsWith('PDFTextField')) {
           const textField = field as any;
-          textField.setText(String(value));
+          
+          // Check maxLength and truncate if necessary
+          let maxLength: number | undefined;
+          try {
+            maxLength = textField.getMaxLength();
+          } catch {
+            // getMaxLength might not be available or might throw
+            maxLength = undefined;
+          }
+          
+          // Replace Polish characters with ASCII equivalents to avoid encoding issues
+          let textValue = replacePolishCharacters(String(value));
+          
+          if (maxLength !== undefined && maxLength > 0 && textValue.length > maxLength) {
+            // Truncate to maxLength
+            textValue = textValue.substring(0, maxLength);
+            if (import.meta.env.DEV) {
+              console.warn(`Field ${fieldName} truncated from ${String(value).length} to ${maxLength} characters`);
+            }
+          }
+          
+          // Set text - Polish characters have already been replaced with ASCII equivalents
+          textField.setText(textValue);
         } else if (fieldType.startsWith('PDFCheckBox')) {
           const checkBox = field as any;
           if (typeof value === 'boolean') {
@@ -355,7 +398,9 @@ export async function fillPdfForm(
           try {
             const textField = field as any;
             if (typeof textField.setText === 'function') {
-              textField.setText(String(value));
+              // Replace Polish characters with ASCII equivalents
+              const textValue = replacePolishCharacters(String(value));
+              textField.setText(textValue);
             } else {
               if (import.meta.env.DEV) {
                 console.warn(`Unknown field type ${fieldType} for field: ${fieldName}`);
@@ -379,6 +424,7 @@ export async function fillPdfForm(
     // form.flatten();
     
     // Save the PDF
+    // All Polish characters have been replaced with ASCII equivalents, so encoding errors should not occur
     const pdfBytesFilled = await pdfDoc.save();
     // Convert to standard Uint8Array for Blob compatibility
     const bytes = new Uint8Array(pdfBytesFilled);
