@@ -1,12 +1,15 @@
 import React from 'react';
 import { HelpCircle, Phone, AlertTriangle, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useOfficerView } from '@/contexts/OfficerViewContext';
 
 interface ZusHeaderProps {
   userName?: string;
 }
 
 export const ZusHeader: React.FC<ZusHeaderProps> = ({ userName = 'Użytkownik' }) => {
+  const { isOfficerView, toggleOfficerView } = useOfficerView();
+
   return (
     <header className="bg-header text-header-foreground">
       <div className="flex items-center justify-between px-4 py-2">
@@ -33,7 +36,7 @@ export const ZusHeader: React.FC<ZusHeaderProps> = ({ userName = 'Użytkownik' }
           </Button>
         </div>
 
-        {/* Right section - Quick links */}
+        {/* Right section - Quick links and Officer View toggle */}
         <div className="flex items-center gap-4">
           <button className="flex items-center gap-2 text-xs hover:text-primary transition-colors">
             <HelpCircle className="w-4 h-4" />
@@ -50,6 +53,17 @@ export const ZusHeader: React.FC<ZusHeaderProps> = ({ userName = 'Użytkownik' }
           <button className="flex items-center gap-2 text-xs hover:text-primary transition-colors">
             <Globe className="w-4 h-4" />
             <span>Mowa</span>
+          </button>
+          {/* Officer View Toggle */}
+          <button
+            onClick={toggleOfficerView}
+            className={`px-4 py-1.5 text-xs border transition-colors ${
+              isOfficerView
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-transparent border-header-foreground/30 text-header-foreground hover:bg-header-foreground/10'
+            }`}
+          >
+            Widok urzędnika
           </button>
         </div>
       </div>

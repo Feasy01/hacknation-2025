@@ -1,13 +1,15 @@
 import React from 'react';
 import { FormField } from '@/components/forms/FormField';
-import { PersonData } from '@/types/accident-report';
+import { PersonData, AINote } from '@/types/accident-report';
 import { User } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { hasFieldError } from '@/utils/fieldMapping';
 
 interface Step1Props {
   data: PersonData;
   onChange: (data: PersonData) => void;
+  aiNotes?: AINote[];
 }
 
 const DOCUMENT_TYPES = [
@@ -17,7 +19,7 @@ const DOCUMENT_TYPES = [
   { value: 'inny', label: 'Inny dokument' },
 ];
 
-export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange }) => {
+export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange, aiNotes = [] }) => {
   const handleChange = (name: string, value: string) => {
     onChange({ ...data, [name]: value });
   };
@@ -37,6 +39,7 @@ export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange }) => {
             value={data.pesel}
             onChange={handleChange}
             placeholder="np. 90010112345"
+            hasError={hasFieldError('pesel', aiNotes, 'poszkodowany')}
           />
           
           <div className="space-y-2">
@@ -68,6 +71,7 @@ export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange }) => {
             value={data.dokumentSeria}
             onChange={handleChange}
             placeholder="np. ABC"
+            hasError={hasFieldError('dokumentSeria', aiNotes, 'poszkodowany')}
           />
           <FormField
             label="Numer dokumentu"
@@ -75,6 +79,7 @@ export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange }) => {
             value={data.dokumentNumer}
             onChange={handleChange}
             placeholder="np. 123456"
+            hasError={hasFieldError('dokumentNumer', aiNotes, 'poszkodowany')}
           />
         </div>
 
@@ -85,6 +90,7 @@ export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange }) => {
             value={data.imie}
             onChange={handleChange}
             placeholder="np. Jan"
+            hasError={hasFieldError('imie', aiNotes, 'poszkodowany')}
           />
           <FormField
             label="Nazwisko"
@@ -92,6 +98,7 @@ export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange }) => {
             value={data.nazwisko}
             onChange={handleChange}
             placeholder="np. Kowalski"
+            hasError={hasFieldError('nazwisko', aiNotes, 'poszkodowany')}
           />
         </div>
 
@@ -102,6 +109,7 @@ export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange }) => {
             value={data.dataUrodzenia}
             onChange={handleChange}
             type="date"
+            hasError={hasFieldError('dataUrodzenia', aiNotes, 'poszkodowany')}
           />
           <FormField
             label="Miejsce urodzenia"
@@ -109,6 +117,7 @@ export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange }) => {
             value={data.miejsceUrodzenia}
             onChange={handleChange}
             placeholder="np. Warszawa"
+            hasError={hasFieldError('miejsceUrodzenia', aiNotes, 'poszkodowany')}
           />
           <FormField
             label="Numer telefonu"
@@ -117,6 +126,7 @@ export const Step1VictimData: React.FC<Step1Props> = ({ data, onChange }) => {
             onChange={handleChange}
             type="tel"
             placeholder="np. +48 123 456 789"
+            hasError={hasFieldError('telefon', aiNotes, 'poszkodowany')}
           />
         </div>
       </div>

@@ -1,17 +1,19 @@
 import React from 'react';
 import { FormField } from '@/components/forms/FormField';
 import { FormTextarea } from '@/components/forms/FormTextarea';
-import { AccidentDetails } from '@/types/accident-report';
+import { AccidentDetails, AINote } from '@/types/accident-report';
 import { AlertTriangle, Clock, Hospital, FileSearch } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { hasFieldError } from '@/utils/fieldMapping';
 
 interface Step5Props {
   data: AccidentDetails;
   onChange: (data: AccidentDetails) => void;
+  aiNotes?: AINote[];
 }
 
-export const Step5AccidentDetails: React.FC<Step5Props> = ({ data, onChange }) => {
+export const Step5AccidentDetails: React.FC<Step5Props> = ({ data, onChange, aiNotes = [] }) => {
   const handleChange = (name: string, value: string) => {
     onChange({ ...data, [name]: value });
   };
@@ -37,6 +39,7 @@ export const Step5AccidentDetails: React.FC<Step5Props> = ({ data, onChange }) =
               value={data.data}
               onChange={handleChange}
               type="date"
+              hasError={hasFieldError('data', aiNotes, 'szczegoly')}
             />
             <FormField
               label="Godzina wypadku"
@@ -44,6 +47,7 @@ export const Step5AccidentDetails: React.FC<Step5Props> = ({ data, onChange }) =
               value={data.godzina}
               onChange={handleChange}
               type="time"
+              hasError={hasFieldError('godzina', aiNotes, 'szczegoly')}
             />
             <FormField
               label="Miejsce wypadku"
@@ -52,6 +56,7 @@ export const Step5AccidentDetails: React.FC<Step5Props> = ({ data, onChange }) =
               onChange={handleChange}
               placeholder="np. plac budowy ul. Nowa 5"
               className="lg:col-span-1 md:col-span-2"
+              hasError={hasFieldError('miejsce', aiNotes, 'szczegoly')}
             />
           </div>
         </div>
@@ -72,6 +77,7 @@ export const Step5AccidentDetails: React.FC<Step5Props> = ({ data, onChange }) =
               value={data.godzinaRozpoczeciaPracy}
               onChange={handleChange}
               type="time"
+              hasError={hasFieldError('godzinaRozpoczeciaPracy', aiNotes, 'szczegoly')}
             />
             <FormField
               label="Planowana godzina zakończenia pracy"
@@ -79,6 +85,7 @@ export const Step5AccidentDetails: React.FC<Step5Props> = ({ data, onChange }) =
               value={data.godzinaZakonczeniaPracy}
               onChange={handleChange}
               type="time"
+              hasError={hasFieldError('godzinaZakonczeniaPracy', aiNotes, 'szczegoly')}
             />
           </div>
         </div>
@@ -99,6 +106,7 @@ export const Step5AccidentDetails: React.FC<Step5Props> = ({ data, onChange }) =
             onChange={handleChange}
             placeholder="Opisz jakie urazy zostały doznanej, np. złamanie ręki, stłuczenie głowy..."
             rows={3}
+            hasError={hasFieldError('opisUrazow', aiNotes, 'szczegoly')}
           />
           
           <FormTextarea
@@ -108,6 +116,7 @@ export const Step5AccidentDetails: React.FC<Step5Props> = ({ data, onChange }) =
             onChange={handleChange}
             placeholder="Opisz dokładnie jak doszło do wypadku, jakie czynności wykonywałeś/aś, co spowodowało wypadek, jak wyglądało miejsce zdarzenia..."
             rows={6}
+            hasError={hasFieldError('opisOkolicznosci', aiNotes, 'szczegoly')}
           />
         </div>
       </div>

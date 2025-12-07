@@ -12,6 +12,7 @@ interface FormTextareaProps {
   required?: boolean;
   className?: string;
   rows?: number;
+  hasError?: boolean;
 }
 
 export const FormTextarea: React.FC<FormTextareaProps> = ({
@@ -23,6 +24,7 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
   required = false,
   className,
   rows = 4,
+  hasError = false,
 }) => {
   return (
     <div className={cn('space-y-2', className)}>
@@ -37,7 +39,10 @@ export const FormTextarea: React.FC<FormTextareaProps> = ({
         onChange={(e) => onChange(name, e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        className="w-full resize-none"
+        className={cn(
+          "w-full resize-none",
+          hasError && "border-destructive focus-visible:ring-destructive"
+        )}
       />
     </div>
   );

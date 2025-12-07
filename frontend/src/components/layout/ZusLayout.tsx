@@ -37,17 +37,7 @@ export const ZusLayout: React.FC<ZusLayoutProps> = ({
         </main>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t border-border bg-card px-4 py-2 flex items-center justify-between text-xs text-muted-foreground">
-        <div className="flex items-center gap-4">
-          <span>Ubezpieczony - Kreatory wniosków</span>
-          <span className="text-primary hover:underline cursor-pointer">Ustawienia cookies</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span>Do końca sesji pozostało: 15 min.</span>
-          <span>Numer wersji: 1.0.0</span>
-        </div>
-      </footer>
+     
     </div>
   );
 };

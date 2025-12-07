@@ -1,3 +1,5 @@
+import { mapFrontendFormToBackend } from './formMapping';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // Helper function to handle API responses
@@ -22,8 +24,10 @@ export const fetchHealth = async () => {
 export const applicationsApi = {
   // Create application
   create: async (formData, attachments = null) => {
+    // Convert frontend camelCase format to backend snake_case format
+    const backendFormData = mapFrontendFormToBackend(formData);
     const payload = {
-      form_data: formData,
+      form_data: backendFormData,
       status: 'draft',
       ...(attachments && attachments.length > 0 && { attachments }),
     };
@@ -162,4 +166,112 @@ export const fileToBase64 = (file) => {
     };
     reader.onerror = (error) => reject(error);
   });
+};
+
+// Chat/Form API
+export const chatApi = {
+  // Get form state
+  getFormState: async (sessionId = null) => {
+    const queryParams = new URLSearchParams();
+    if (sessionId) queryParams.append('sessionId', sessionId);
+    
+    const response = await fetch(`${API_BASE_URL}/api/form/state?${queryParams.toString()}`);
+    return handleResponse(response);
+  },
+
+  // Send chat message
+  sendMessage: async (message, sessionId = null) => {
+    const response = await fetch(`${API_BASE_URL}/api/chat/message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message, sessionId }),
+    });
+    
+    return handleResponse(response);
+  },
+
+  // Skip to acceptance
+  skipToAcceptance: async (sessionId) => {
+    const response = await fetch(`${API_BASE_URL}/api/form/skip?sessionId=${sessionId}`, {
+      method: 'POST',
+    });
+    
+    return handleResponse(response);
+  },
+};
+
+// ElevenLabs integration helpers
+export const elevenLabsApi = {
+  // Sync manual form edits into ElevenLabs conversation session
+  syncConversation: async (conversationId, formData, analyse = false) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/elevenlabs/conversation/${conversationId}/sync`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          form_data: formData,
+          analyse: analyse  // NOWE - opcjonalna flaga
+        }),
+      }
+    );
+
+    return handleResponse(response);
+  },
+
+  // NEW: Trigger form analysis
+  analyseConversation: async (conversationId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/elevenlabs/conversation/${conversationId}/analyse`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    return handleResponse(response);
+  },
+
+  // NEW: Get conversation snapshot (includes ai_notes)
+  getConversationSnapshot: async (conversationId) => {
+    const response = await fetch(
+      `${API_BASE_URL}/api/elevenlabs/snapshot/${conversationId}`
+    );
+
+    return handleResponse(response);
+  },
+};
+
+// ZUS Accident Analysis API
+export const accidentAnalysisApi = {
+  // Analyze accident case from uploaded documents
+  analyseAccident: async (files) => {
+    // Convert files to the expected format
+    const fileInputs = await Promise.all(
+      files.map(async (file) => {
+        const base64 = await fileToBase64(file);
+        return {
+          filename: file.name,
+          mime_type: file.type,
+          data: base64,
+        };
+      })
+    );
+
+    const response = await fetch(`${API_BASE_URL}/api/zus-accidents/analyse`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ files: fileInputs }),
+    });
+
+    return handleResponse(response);
+  },
 };
